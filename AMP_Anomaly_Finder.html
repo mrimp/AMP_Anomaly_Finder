@@ -1,0 +1,654 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AMP CSV Anomaly Finder (offline)</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#0f1722; --panel2:#111b28; --text:#e6edf3; --muted:#9fb0c0;
+    --line:rgba(255,255,255,.08); --accent:#7dd3fc; --good:#22c55e; --warn:#fbbf24; --bad:#fb7185; --hot:#f97316;
+    --chip:#162235;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  }
+  html,body{height:100%}
+  body{margin:0;background:radial-gradient(1200px 800px at 30% -10%, rgba(125,211,252,.10), transparent 55%),
+                  radial-gradient(1000px 700px at 90% 10%, rgba(251,113,133,.08), transparent 55%),
+                  var(--bg);
+       color:var(--text); font-family:var(--sans);}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 30px;}
+  header{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px;}
+  .title{display:flex;flex-direction:column;gap:2px}
+  h1{font-size:18px;margin:0;letter-spacing:.2px}
+  .sub{font-size:12px;color:var(--muted);line-height:1.35}
+  .row{display:grid;grid-template-columns: 420px 1fr; gap:12px; align-items:start}
+  @media (max-width: 980px){ .row{grid-template-columns:1fr;} }
+  .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        border:1px solid var(--line); border-radius:14px; padding:12px; box-shadow: 0 12px 30px rgba(0,0,0,.22);}
+  .card h2{font-size:13px;margin:0 0 10px 0;color:var(--text);letter-spacing:.2px}
+  .drop{border:1px dashed rgba(125,211,252,.35); border-radius:14px; padding:14px; background:rgba(125,211,252,.05);
+        display:flex; gap:12px; align-items:flex-start}
+  .drop.drag{background:rgba(125,211,252,.10); border-color:rgba(125,211,252,.65)}
+  .drop .icon{width:34px;height:34px;border-radius:10px;background:rgba(125,211,252,.12);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+  .btn{background:rgba(125,211,252,.14); color:var(--text); border:1px solid rgba(125,211,252,.35);
+       padding:8px 10px; border-radius:10px; cursor:pointer; font-size:12px}
+  .btn:hover{background:rgba(125,211,252,.18)}
+  .btn.ghost{background:transparent;border-color:var(--line)}
+  .btn.danger{background:rgba(251,113,133,.13);border-color:rgba(251,113,133,.35)}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .field{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--line);padding:8px 10px;border-radius:12px}
+  .field label{font-size:12px;color:var(--muted)}
+  .field input[type="range"]{width:150px}
+  select,input[type="text"]{background:rgba(15,23,34,.8);color:var(--text);border:1px solid var(--line);
+     border-radius:10px;padding:7px 9px;font-size:12px;outline:none}
+  input[type="checkbox"]{transform: translateY(1px)}
+  .kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
+  @media (max-width:600px){.kpi{grid-template-columns:1fr}}
+  .k{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px;padding:10px}
+  .k .lab{font-size:11px;color:var(--muted)}
+  .k .val{font-size:18px;margin-top:4px;font-weight:700}
+  .small{font-size:11px;color:var(--muted)}
+  .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:11px;color:var(--muted)}
+  .pill b{color:var(--text)}
+  .tableWrap{overflow:auto;border-radius:14px;border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead th{position:sticky;top:0;background:rgba(15,23,34,.95);backdrop-filter: blur(6px); z-index:2;
+           text-align:left;padding:10px;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;white-space:nowrap}
+  tbody td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap}
+  tbody tr:hover{outline:1px solid rgba(125,211,252,.28); outline-offset:-1px}
+  .mono{font-family:var(--mono)}
+  .scoreCell{font-weight:700}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .dot{width:8px;height:8px;border-radius:99px;display:inline-block}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+  .legend .tag{font-size:11px}
+  .footer{margin-top:10px;color:var(--muted);font-size:11px;line-height:1.35}
+  .muted{color:var(--muted)}
+  .right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .warnBox{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.25);padding:10px;border-radius:12px;color:var(--text);font-size:12px}
+  .hint{margin-top:6px;color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <h1>AMP CSV Anomaly Finder</h1>
+      <div class="sub">Drop one or more AMP “Press” CSV exports. The tool reshapes traces into round-by-round rows, scores “weirdness” using robust z-scores, and highlights anomalies. Runs 100% locally in your browser.</div>
+    </div>
+    <div class="right">
+      <span class="pill"><b>Offline</b> · single HTML</span>
+      <button class="btn ghost" id="btnExport">Export shown rows (CSV)</button>
+      <button class="btn danger" id="btnClear">Clear</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <section class="card">
+      <h2>Upload</h2>
+      <div class="drop" id="drop">
+        <div class="icon">⇪</div>
+        <div>
+          <div style="font-weight:700; margin-bottom:6px;">Drop AMP CSV files here</div>
+          <div class="small">Or click to select. Each file becomes a “session”.</div>
+          <input type="file" id="file" accept=".csv,text/csv" multiple style="display:none"/>
+          <div class="controls">
+            <button class="btn" id="btnPick">Choose files</button>
+            <div class="field">
+              <label>Session</label>
+              <select id="sessionSel"></select>
+            </div>
+          </div>
+          <div class="hint">Tip: your AMP export is often “wide” (variables in rows, Trace 1..N in columns). This tool expects that format.</div>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <h2>Scoring + Filters</h2>
+      <div class="controls">
+        <div class="field">
+          <label>Anomaly threshold</label>
+          <input type="range" id="thr" min="0.5" max="6" step="0.1" value="2.5"/>
+          <span class="mono" id="thrVal">2.5</span>
+        </div>
+
+        <div class="field">
+          <label><input type="checkbox" id="onlyAnom"> Only anomalies</label>
+        </div>
+
+        <div class="field">
+          <label>Search</label>
+          <input type="text" id="q" placeholder="e.g. Trace 44, flyer, peak…" style="width:190px"/>
+        </div>
+
+        <div class="field">
+          <label>Sort</label>
+          <select id="sortSel">
+            <option value="scoreDesc">Score ↓</option>
+            <option value="scoreAsc">Score ↑</option>
+            <option value="traceAsc">Trace ↑</option>
+            <option value="peakDesc">Peak Force ↓</option>
+            <option value="workDesc">Work Done ↓</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="kpi" id="kpis">
+        <div class="k"><div class="lab">Rounds</div><div class="val" id="kRounds">—</div></div>
+        <div class="k"><div class="lab">Anomalies</div><div class="val" id="kAnom">—</div></div>
+        <div class="k"><div class="lab">Peak Force median</div><div class="val" id="kPeak">—</div><div class="small muted" id="kPeak2"></div></div>
+      </div>
+
+      <div class="legend">
+        <span class="tag"><span class="dot" style="background:var(--good)"></span>Normal</span>
+        <span class="tag"><span class="dot" style="background:var(--warn)"></span>Moderate</span>
+        <span class="tag"><span class="dot" style="background:var(--hot)"></span>High</span>
+        <span class="tag"><span class="dot" style="background:var(--bad)"></span>Extreme</span>
+      </div>
+
+      <div class="footer">
+        Scoring uses robust z-scores (median/MAD) on: <span class="mono">Peak Force</span>, <span class="mono">Work Done</span>,
+        <span class="mono">Starting Pos</span>, <span class="mono">Terminal Force</span>. “Flyer=true” gets a score bump.
+        You can change the threshold to be more/less picky.
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Rounds</h2>
+      <div id="empty" class="warnBox" style="display:block">
+        Upload one or more AMP CSV files to see a scored table here.
+        <div class="hint">If your export is a different AMP format, tell me what the headers look like and I’ll adapt the parser.</div>
+      </div>
+      <div class="tableWrap" id="tableWrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Trace</th>
+              <th>Flyer</th>
+              <th>Anomaly</th>
+              <th>Score</th>
+              <th>Driver</th>
+              <th class="mono">Peak Force</th>
+              <th class="mono">Work Done</th>
+              <th class="mono">Starting Pos</th>
+              <th class="mono">Terminal Force</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* ============
+   Tiny CSV parser (handles quotes and commas).
+   ============ */
+function parseCSV(text){
+  const rows = [];
+  let i=0, field="", row=[], inQuotes=false;
+  while(i < text.length){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field+='"'; i+=2; continue; }
+        inQuotes=false; i++; continue;
+      } else { field += c; i++; continue; }
+    } else {
+      if(c === '"'){ inQuotes=true; i++; continue; }
+      if(c === ','){ row.push(field); field=""; i++; continue; }
+      if(c === '\r'){ i++; continue; }
+      if(c === '\n'){ row.push(field); rows.push(row); field=""; row=[]; i++; continue; }
+      field += c; i++; continue;
+    }
+  }
+  row.push(field);
+  // avoid trailing empty row
+  if(row.length>1 || (row.length===1 && row[0].trim()!=="")) rows.push(row);
+  return rows;
+}
+function toNum(x){
+  if(x==null) return null;
+  const s = String(x).trim();
+  if(s==="") return null;
+  const v = Number(s);
+  return Number.isFinite(v) ? v : null;
+}
+function median(arr){
+  const a = arr.filter(v=>Number.isFinite(v)).slice().sort((x,y)=>x-y);
+  const n = a.length;
+  if(!n) return null;
+  const mid = Math.floor(n/2);
+  return n%2 ? a[mid] : (a[mid-1]+a[mid])/2;
+}
+function mad(arr, med){
+  const dev = arr.filter(v=>Number.isFinite(v)).map(v=>Math.abs(v-med));
+  return median(dev);
+}
+function mean(arr){
+  const a = arr.filter(v=>Number.isFinite(v));
+  if(!a.length) return null;
+  return a.reduce((s,v)=>s+v,0)/a.length;
+}
+function stdev(arr){
+  const a = arr.filter(v=>Number.isFinite(v));
+  if(a.length<2) return null;
+  const m = mean(a);
+  const v = a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1);
+  return Math.sqrt(v);
+}
+function fmt(x, d=3){
+  if(x==null || !Number.isFinite(x)) return "—";
+  return x.toFixed(d);
+}
+function clsFromScore(s){
+  // classification buckets for legend + row tint
+  if(s >= 4) return "extreme";
+  if(s >= 3) return "high";
+  if(s >= 2) return "moderate";
+  return "normal";
+}
+function colorForBucket(b){
+  if(b==="extreme") return "rgba(251,113,133,.22)";
+  if(b==="high") return "rgba(249,115,22,.18)";
+  if(b==="moderate") return "rgba(251,191,36,.14)";
+  return "rgba(34,197,94,.10)";
+}
+function dotColor(b){
+  if(b==="extreme") return "var(--bad)";
+  if(b==="high") return "var(--hot)";
+  if(b==="moderate") return "var(--warn)";
+  return "var(--good)";
+}
+
+/* ============
+   Data model
+   ============ */
+const state = {
+  sessions: [], // {name, rounds, stats}
+  activeIdx: -1,
+  threshold: 2.5,
+  onlyAnom: false,
+  query: "",
+  sort: "scoreDesc"
+};
+
+function reshapeAmpWide(rows, filename){
+  // rows: array of arrays. First row is header: ["", "Trace 1", "Trace 2", ...]
+  // First col is variable name; other columns are trace values.
+  if(!rows || rows.length<2) throw new Error("Empty CSV");
+  const header = rows[0].map(x => (x ?? "").trim());
+  if(header.length < 3) throw new Error("CSV header too short");
+  const traceCols = header.slice(1);
+  const n = traceCols.length;
+
+  const map = new Map(); // varName => values (len n)
+  for(let r=1; r<rows.length; r++){
+    const varName = (rows[r][0] ?? "").trim();
+    if(!varName) continue;
+    const vals = [];
+    for(let c=1; c<header.length; c++){
+      vals.push(rows[r][c] ?? "");
+    }
+    map.set(varName, vals);
+  }
+
+  // helper to fetch a row by canonical key (case-insensitive)
+  function getVar(keys){
+    for(const k of keys){
+      for(const [name, vals] of map.entries()){
+        if(name.toLowerCase() === k.toLowerCase()) return {name, vals};
+      }
+    }
+    // fuzzy contains (backup)
+    for(const k of keys){
+      for(const [name, vals] of map.entries()){
+        if(name.toLowerCase().includes(k.toLowerCase())) return {name, vals};
+      }
+    }
+    return null;
+  }
+
+  const flyerRow = getVar(["Flyer"]);
+  const peakRow  = getVar(["Peak Force"]);
+  const workRow  = getVar(["Work Done"]);
+  const startRow = getVar(["Starting Pos","Starting Position"]);
+  const termRow  = getVar(["Terminal Force"]);
+
+  if(!peakRow && !workRow && !startRow && !termRow){
+    throw new Error("Couldn't find AMP metric rows (Peak Force/Work Done/etc).");
+  }
+
+  const rounds = [];
+  for(let i=0;i<n;i++){
+    const traceName = traceCols[i] || `Trace ${i+1}`;
+    const flyer = flyerRow ? String((flyerRow.vals[i] ?? "")).trim().toLowerCase()==="true" : false;
+    const peak  = peakRow  ? toNum(peakRow.vals[i]) : null;
+    const work  = workRow  ? toNum(workRow.vals[i]) : null;
+    const start = startRow ? toNum(startRow.vals[i]) : null;
+    const term  = termRow  ? toNum(termRow.vals[i]) : null;
+
+    rounds.push({
+      session: filename,
+      trace: traceName,
+      traceIdx: i+1,
+      flyer,
+      peakForce: peak,
+      workDone: work,
+      startingPos: start,
+      terminalForce: term,
+      // computed
+      score: 0,
+      bucket: "normal",
+      driver: "—",
+      z: {}
+    });
+  }
+
+  // compute robust z for each metric
+  const metrics = [
+    {key:"peakForce", label:"Peak Force", w: 1.00},
+    {key:"workDone", label:"Work Done", w: 0.85},
+    {key:"startingPos", label:"Starting Pos", w: 0.70},
+    {key:"terminalForce", label:"Terminal Force", w: 0.70}
+  ];
+  const stats = {};
+  for(const m of metrics){
+    const arr = rounds.map(r=>r[m.key]).filter(v=>Number.isFinite(v));
+    const med = median(arr);
+    let theMad = (med==null) ? null : mad(arr, med);
+    let sd = null;
+    if(!theMad || theMad===0){
+      sd = stdev(arr);
+    }
+    stats[m.key] = {label:m.label, med, mad: theMad, sd};
+  }
+
+  // robust z: 0.6745*(x-med)/MAD ; fallback to (x-mean)/sd
+  for(const r of rounds){
+    let scoreSum=0, wSum=0;
+    let driver="—", driverAbs=-1;
+    for(const m of metrics){
+      const x = r[m.key];
+      const st = stats[m.key];
+      let z = 0;
+      if(Number.isFinite(x) && st.med!=null){
+        if(st.mad && st.mad>0){
+          z = 0.6745 * (x - st.med) / st.mad;
+        } else if(st.sd && st.sd>0){
+          const mu = mean(rounds.map(rr=>rr[m.key]));
+          z = (x - mu) / st.sd;
+        } else {
+          z = 0;
+        }
+      }
+      r.z[m.key]=z;
+      const az = Math.abs(z);
+      scoreSum += m.w * az;
+      wSum += m.w;
+      if(az > driverAbs){
+        driverAbs = az;
+        driver = `${m.label} (${az.toFixed(2)}σ)`;
+      }
+    }
+    let score = wSum>0 ? scoreSum / wSum : 0;
+    if(r.flyer) score = Math.max(score, 3.0) + 0.5; // bump flyers
+    r.score = score;
+    r.driver = driver;
+    r.bucket = clsFromScore(score);
+  }
+
+  // session summary
+  const peakArr = rounds.map(r=>r.peakForce).filter(v=>Number.isFinite(v));
+  const peakMed = median(peakArr);
+  const peakMAD = (peakMed==null) ? null : mad(peakArr, peakMed);
+  const anomCnt = rounds.filter(r=>r.score >= state.threshold).length;
+
+  return {
+    name: filename,
+    rounds,
+    stats,
+    summary: {
+      n: rounds.length,
+      anomalies: anomCnt,
+      peakMed,
+      peakMAD
+    }
+  };
+}
+
+/* ============
+   UI wiring
+   ============ */
+const el = (id)=>document.getElementById(id);
+const drop = el("drop");
+const fileInput = el("file");
+const sessionSel = el("sessionSel");
+const tbody = el("tbody");
+const tableWrap = el("tableWrap");
+const emptyBox = el("empty");
+
+function setEmpty(on){
+  emptyBox.style.display = on ? "block":"none";
+  tableWrap.style.display = on ? "none":"block";
+}
+function updateKPIs(sess){
+  el("kRounds").textContent = sess ? String(sess.summary.n) : "—";
+  el("kAnom").textContent = sess ? String(sess.rounds.filter(r=>r.score>=state.threshold).length) : "—";
+  el("kPeak").textContent = sess && sess.summary.peakMed!=null ? fmt(sess.summary.peakMed,3) : "—";
+  el("kPeak2").textContent = sess && sess.summary.peakMAD!=null ? `MAD ${fmt(sess.summary.peakMAD,3)}` : "";
+}
+function renderSessionOptions(){
+  sessionSel.innerHTML = "";
+  if(!state.sessions.length){
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "—";
+    sessionSel.appendChild(opt);
+    return;
+  }
+  state.sessions.forEach((s, idx)=>{
+    const opt = document.createElement("option");
+    opt.value = String(idx);
+    opt.textContent = `${s.name} (${s.rounds.length} rounds)`;
+    sessionSel.appendChild(opt);
+  });
+  sessionSel.value = String(state.activeIdx);
+}
+function getActive(){
+  if(state.activeIdx<0 || state.activeIdx>=state.sessions.length) return null;
+  return state.sessions[state.activeIdx];
+}
+function matchesQuery(r, q){
+  if(!q) return true;
+  const s = q.toLowerCase();
+  return (
+    r.trace.toLowerCase().includes(s) ||
+    (r.flyer ? "flyer true" : "flyer false").includes(s) ||
+    String(r.score.toFixed(2)).includes(s) ||
+    (r.driver || "").toLowerCase().includes(s)
+  );
+}
+function sortRounds(arr){
+  const a = arr.slice();
+  const s = state.sort;
+  const num = (x)=> (x==null || !Number.isFinite(x)) ? -Infinity : x;
+  if(s==="scoreAsc") a.sort((x,y)=>x.score-y.score);
+  else if(s==="traceAsc") a.sort((x,y)=>x.traceIdx-y.traceIdx);
+  else if(s==="peakDesc") a.sort((x,y)=>num(y.peakForce)-num(x.peakForce));
+  else if(s==="workDesc") a.sort((x,y)=>num(y.workDone)-num(x.workDone));
+  else a.sort((x,y)=>y.score-x.score);
+  return a;
+}
+function renderTable(){
+  const sess = getActive();
+  if(!sess){ setEmpty(true); updateKPIs(null); return; }
+  setEmpty(false);
+
+  let rows = sess.rounds.slice();
+  // apply threshold and query
+  rows = rows.filter(r=>{
+    if(state.onlyAnom && r.score < state.threshold) return false;
+    if(!matchesQuery(r, state.query)) return false;
+    return true;
+  });
+  rows = sortRounds(rows);
+
+  updateKPIs(sess);
+
+  tbody.innerHTML = "";
+  for(const r of rows){
+    const tr = document.createElement("tr");
+    const bg = colorForBucket(r.bucket);
+    const glow = r.score >= state.threshold ? "rgba(125,211,252,.18)" : "transparent";
+    tr.style.background = bg;
+    tr.style.boxShadow = `inset 0 0 0 1px ${glow}`;
+
+    const anom = r.score >= state.threshold;
+    const tds = [
+      `<span class="mono">${escapeHtml(r.trace)}</span>`,
+      `<span class="tag"><span class="dot" style="background:${r.flyer ? "var(--bad)" : "rgba(255,255,255,.25)"}"></span>${r.flyer ? "true":"false"}</span>`,
+      `<span class="tag"><span class="dot" style="background:${anom ? "var(--accent)" : "rgba(255,255,255,.18)"}"></span>${anom ? "YES":"no"}</span>`,
+      `<span class="scoreCell mono">${r.score.toFixed(2)}</span>`,
+      `<span class="muted">${escapeHtml(r.driver)}</span>`,
+      `<span class="mono">${fmt(r.peakForce,3)}</span>`,
+      `<span class="mono">${fmt(r.workDone,3)}</span>`,
+      `<span class="mono">${fmt(r.startingPos,3)}</span>`,
+      `<span class="mono">${fmt(r.terminalForce,3)}</span>`
+    ];
+    tr.innerHTML = tds.map(x=>`<td>${x}</td>`).join("");
+    tbody.appendChild(tr);
+  }
+}
+
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+async function loadFiles(files){
+  const fileArr = Array.from(files || []);
+  if(!fileArr.length) return;
+
+  for(const f of fileArr){
+    const text = await f.text();
+    const rows = parseCSV(text);
+    let session;
+    try{
+      session = reshapeAmpWide(rows, f.name);
+    }catch(err){
+      alert(`Couldn't parse "${f.name}": ${err.message}`);
+      continue;
+    }
+    // replace if same name already exists
+    const existing = state.sessions.findIndex(s=>s.name===session.name);
+    if(existing>=0) state.sessions[existing]=session;
+    else state.sessions.push(session);
+  }
+  // set active to newest
+  state.activeIdx = state.sessions.length ? state.sessions.length-1 : -1;
+  renderSessionOptions();
+  renderTable();
+}
+
+/* ============
+   Export CSV (shown rows)
+   ============ */
+function exportShown(){
+  const sess = getActive();
+  if(!sess) return;
+  let rows = sess.rounds.slice();
+  rows = rows.filter(r=>{
+    if(state.onlyAnom && r.score < state.threshold) return false;
+    if(!matchesQuery(r, state.query)) return false;
+    return true;
+  });
+  rows = sortRounds(rows);
+
+  const header = ["Session","Trace","TraceIdx","Flyer","Anomaly","Score","Driver","PeakForce","WorkDone","StartingPos","TerminalForce"];
+  const lines = [header.join(",")];
+  for(const r of rows){
+    const anom = r.score >= state.threshold;
+    const line = [
+      csvCell(r.session),
+      csvCell(r.trace),
+      r.traceIdx,
+      r.flyer ? "true":"false",
+      anom ? "true":"false",
+      r.score.toFixed(4),
+      csvCell(r.driver),
+      numCell(r.peakForce),
+      numCell(r.workDone),
+      numCell(r.startingPos),
+      numCell(r.terminalForce)
+    ].join(",");
+    lines.push(line);
+  }
+  const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `amp_anomalies_${sess.name.replace(/[^a-z0-9._-]+/gi,"_")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+function csvCell(v){
+  const s = String(v ?? "");
+  if(/[",\n\r]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+  return s;
+}
+function numCell(v){
+  return (v==null || !Number.isFinite(v)) ? "" : String(v);
+}
+
+/* ============
+   Events
+   ============ */
+el("btnPick").addEventListener("click", ()=>fileInput.click());
+fileInput.addEventListener("change", (e)=>loadFiles(e.target.files));
+
+drop.addEventListener("click", ()=>fileInput.click());
+drop.addEventListener("dragover", (e)=>{ e.preventDefault(); drop.classList.add("drag"); });
+drop.addEventListener("dragleave", ()=>drop.classList.remove("drag"));
+drop.addEventListener("drop", (e)=>{
+  e.preventDefault(); drop.classList.remove("drag");
+  if(e.dataTransfer && e.dataTransfer.files) loadFiles(e.dataTransfer.files);
+});
+
+el("thr").addEventListener("input", (e)=>{
+  state.threshold = Number(e.target.value);
+  el("thrVal").textContent = state.threshold.toFixed(1);
+  renderTable();
+});
+el("onlyAnom").addEventListener("change", (e)=>{ state.onlyAnom = e.target.checked; renderTable(); });
+el("q").addEventListener("input", (e)=>{ state.query = e.target.value.trim(); renderTable(); });
+el("sortSel").addEventListener("change", (e)=>{ state.sort = e.target.value; renderTable(); });
+
+sessionSel.addEventListener("change", (e)=>{
+  const idx = Number(e.target.value);
+  state.activeIdx = Number.isFinite(idx) ? idx : 0;
+  renderTable();
+});
+
+el("btnClear").addEventListener("click", ()=>{
+  state.sessions = [];
+  state.activeIdx = -1;
+  renderSessionOptions();
+  renderTable();
+});
+
+el("btnExport").addEventListener("click", exportShown);
+
+// init
+el("thrVal").textContent = Number(el("thr").value).toFixed(1);
+renderSessionOptions();
+renderTable();
+</script>
+</body>
+</html>
