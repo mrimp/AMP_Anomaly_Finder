@@ -194,7 +194,7 @@ tr.excluded{opacity:.55;}
 <body>
 <header>
   <div>
-    <h1>AMP CSV Anomaly Finder v3.8 v3.8 <span class="pill">offline</span></h1>
+    <h1>AMP CSV Anomaly Finder v3.10 <span class="pill">offline</span></h1>
     <div class="sub">Upload AMP “Press” CSV exports (wide). Scores anomalies + adds curve diagnostics (early spike, jaggedness, end flat/drop) when curve data exists.</div>
   </div>
   <div class="right">
@@ -411,6 +411,8 @@ tr.excluded{opacity:.55;}
         <tbody id="sessionsTbody"></tbody>
       </table>
     </div>
+    
+
 
   </section>
 </main>
@@ -442,7 +444,11 @@ const state = {
   baselineMode: "none", // none|active|custom
   baseline: null, // {metrics:{key:{med}}, curves:{key:{med}}}
   traceChart: { overlayWork:false, useFiltered:false, showExcluded:true },
-  shownRows: []
+  shownRows: [],
+  shotLedger: null,
+  corr: { points: [], hoverIdx: -1 },
+  tcPoints: [],
+
 };
 
 const els = {
@@ -486,7 +492,17 @@ const els = {
   baseChip: document.getElementById('baseChip'),
   showChip: document.getElementById('showChip'),
   curveChip2: document.getElementById('curveChip'),
-  injWarn: document.getElementById('injWarn')
+  injWarn: document.getElementById('injWarn'),
+
+  tabCorr: document.getElementById('tabCorr'),
+  corrWrap: document.getElementById('corrWrap'),
+  corrFile: document.getElementById('corrFile'),
+  corrJoin: document.getElementById('corrJoin'),
+  btnCorrClear: document.getElementById('btnCorrClear'),
+  corrChart: document.getElementById('corrChart'),
+  corrTbody: document.getElementById('corrTbody'),
+  corrStatus: document.getElementById('corrStatus'),
+  corrStats: document.getElementById('corrStats'),
 };
 
 /* ========== utils ========== */
@@ -1197,7 +1213,7 @@ function renderSessionsView(){
         renderSessionOptions();
         // switch back to rounds view
         state.view='rounds';
-        els.tabRounds.classList.add('active'); els.tabSessions.classList.remove('active');
+        els.tabRounds.classList.add('active'); els.tabSessions.classList.remove('active'); if(els.tabCorr) els.tabCorr.classList.remove('active');
         els.sessionsWrap.style.display='none';
         els.tableWrap.style.display='block';
         render();
@@ -1394,6 +1410,7 @@ function renderTraceChart(){
   const ctx = c.getContext('2d');
   const W = c.width, H = c.height;
   ctx.clearRect(0,0,W,H);
+  state.tcPoints = [];
 
   const sess = getActiveSession();
   if(!sess || !sess.rounds || !sess.rounds.length){
@@ -1469,6 +1486,44 @@ function drawTraceChart(rounds, opts){
   ctx.fillText('Peak', 8, 22);
   if(overlayWork) ctx.fillText('Work', 8, 38);
 
+
+  // ES bounds (Peak Force) + ES-limit band
+  const peakValsAll = rounds.map(r=>r.peakForce).filter(v=>Number.isFinite(v));
+  const minPeakAll = peakValsAll.length ? Math.min(...peakValsAll) : null;
+  const maxPeakAll = peakValsAll.length ? Math.max(...peakValsAll) : null;
+  const esAll = (minPeakAll!=null && maxPeakAll!=null) ? (maxPeakAll-minPeakAll) : null;
+  if(esAll!=null){
+    const yMin = yP(minPeakAll), yMax = yP(maxPeakAll);
+    ctx.save();
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle = 'rgba(255,255,255,.14)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xPad, yMin); ctx.lineTo(xPad+plotW, yMin); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xPad, yMax); ctx.lineTo(xPad+plotW, yMax); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.font = '12px ui-sans-serif';
+    ctx.fillText('Peak ES: '+fmt(esAll,1)+' lb', xPad+8, yPad+12);
+    ctx.restore();
+
+    // ES limit band around median (if set)
+    if(Number.isFinite(state.esLimit) && state.esLimit>0){
+      const med = median(peakValsAll);
+      const half = state.esLimit/2;
+      const yLo = yP(med-half), yHi = yP(med+half);
+      ctx.save();
+      ctx.setLineDash([3,5]);
+      ctx.strokeStyle = 'rgba(124,220,255,.18)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xPad, yLo); ctx.lineTo(xPad+plotW, yLo); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xPad, yHi); ctx.lineTo(xPad+plotW, yHi); ctx.stroke();
+      ctx.fillStyle = 'rgba(124,220,255,.45)';
+      ctx.font = '12px ui-sans-serif';
+      ctx.fillText('ES limit band (±'+fmt(half,1)+' lb)', xPad+8, yPad+26);
+      ctx.restore();
+    }
+  }
+
   // Peak line
   ctx.strokeStyle = 'rgba(124,220,255,.85)';
   ctx.lineWidth = 2;
@@ -1540,6 +1595,65 @@ function drawTraceChart(rounds, opts){
   if(overlayWork) ctx.fillText('Work Done', xPad+92, yPad+14);
 }
 
+
+
+function showFloatTip(html, x, y){
+  const tip = document.getElementById('floatTip');
+  if(!tip) return;
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  const pad = 12;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  // measure
+  tip.style.left = '0px'; tip.style.top = '0px';
+  const rect = tip.getBoundingClientRect();
+  let left = x + pad;
+  let top = y + pad;
+  if(left + rect.width + pad > vw) left = x - rect.width - pad;
+  if(top + rect.height + pad > vh) top = y - rect.height - pad;
+  left = Math.max(pad, Math.min(vw - rect.width - pad, left));
+  top = Math.max(pad, Math.min(vh - rect.height - pad, top));
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+}
+function hideFloatTip(){
+  const tip = document.getElementById('floatTip');
+  if(tip) tip.style.display = 'none';
+}
+function initTraceChartHover(){
+  const c = els.traceChart;
+  if(!c) return;
+  c.addEventListener('mouseleave', ()=>{ hideFloatTip(); });
+  c.addEventListener('mousemove', (ev)=>{
+    const rect = c.getBoundingClientRect();
+    const mx = (ev.clientX - rect.left) * (c.width / rect.width);
+    const my = (ev.clientY - rect.top) * (c.height / rect.height);
+    // find nearest point
+    let best = null, bestD = 1e9;
+    for(const p of (state.tcPoints||[])){
+      const dx = p.x - mx, dy = p.y - my;
+      const d = dx*dx + dy*dy;
+      if(d < bestD){ bestD=d; best=p; }
+    }
+    const hit = best && bestD <= (9*9);
+    if(!hit){ hideFloatTip(); return; }
+    const r = best.r;
+    const why = (r.whyList && r.whyList.length) ? r.whyList.join(', ') : (r.why||'—');
+    const html = `
+      <div style="font-weight:700; margin-bottom:6px">Trace ${escapeHtml(String(r.traceIndex||r.trace||''))}</div>
+      <div class="mono" style="opacity:.9">Peak: ${fmt(r.peakForce,3)} lb</div>
+      <div class="mono" style="opacity:.9">Work: ${fmt(r.workDone,3)} • Start: ${fmt(r.startingPos,3)} • Term: ${fmt(r.terminalForce,3)}</div>
+      <div style="margin-top:6px">
+        <span class="chip">${r.flyer?'Flyer':'No flyer'}</span>
+        <span class="chip">${r.excluded?'Excluded':'Included'}</span>
+        ${r.tag?`<span class="chip">${escapeHtml(r.tag)}</span>`:''}
+      </div>
+      <div style="margin-top:6px; opacity:.9">Score: <span class="mono">${fmt(r.score,2)}</span> • Cause: ${escapeHtml(r.cause||'—')} • Conf: ${escapeHtml(confLabel(r.confidence||0))}</div>
+      <div style="margin-top:6px; opacity:.85">Why: ${escapeHtml(why)}</div>
+    `;
+    showFloatTip(html, ev.clientX, ev.clientY);
+  });
+}
 
 function sortRounds(a,b){
   // Header-click sort takes precedence
@@ -1796,7 +1910,7 @@ els.hideEx.addEventListener('change', ()=>{
 });
 els.tabRounds.addEventListener('click', ()=>{
   state.view='rounds';
-  els.tabRounds.classList.add('active'); els.tabSessions.classList.remove('active');
+  els.tabRounds.classList.add('active'); els.tabSessions.classList.remove('active'); if(els.tabCorr) els.tabCorr.classList.remove('active');
   els.tableWrap.style.display = (getActiveSession() ? 'block':'none');
   els.sessionsWrap.style.display = 'none';
 });
@@ -1809,7 +1923,244 @@ els.tabSessions.addEventListener('click', ()=>{
 });
 els.btnExportSessions.addEventListener('click', exportSessionsCSV);
 
+// Correlation tab removed for now (ShotLedger integration pending).
+// (Code retained but not bound unless the Correlation UI exists.)
+if (els.tabCorr && els.corrWrap) {
+  els.tabCorr.addEventListener('click', ()=>{
+    state.view='corr';
+    els.tabCorr.classList.add('active'); els.tabRounds.classList.remove('active'); els.tabSessions.classList.remove('active');
+    els.corrWrap.style.display = 'block';
+    els.tableWrap.style.display = 'none';
+    els.sessionsWrap.style.display = 'none';
+    renderCorrelationView();
+  });
+  if(els.corrFile) els.corrFile.addEventListener('change', (e)=>{
+    const f = e.target.files && e.target.files[0];
+    if(f) handleCorrFile(f);
+    e.target.value = '';
+  });
+  if(els.btnCorrClear) els.btnCorrClear.addEventListener('click', ()=>{
+    state.shotLedger = null;
+    if(els.corrTbody) els.corrTbody.innerHTML = '';
+    renderCorrelationView();
+  });
+}
+
+
+function inferColumn(objKeys, needles){
+  const keys = objKeys.map(k=>({k, lk:k.toLowerCase().replace(/\s+/g,'')}));
+  for(const n of needles){
+    const nn = n.toLowerCase().replace(/\s+/g,'');
+    const found = keys.find(x=>x.lk===nn) || keys.find(x=>x.lk.includes(nn));
+    if(found) return found.k;
+  }
+  return null;
+}
+function parseSimpleCSV(text){
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
+  if(lines.length<2) return [];
+  const delim = (lines[0].includes('\t') && !lines[0].includes(',')) ? '\t' : ',';
+  const headers = lines[0].split(delim).map(h=>h.trim());
+  const rows = [];
+  for(let i=1;i<lines.length;i++){
+    const parts = lines[i].split(delim);
+    const o={};
+    headers.forEach((h,idx)=>{ o[h]= (parts[idx]??'').trim(); });
+    rows.push(o);
+  }
+  return rows;
+}
+function readAsText(file){
+  return new Promise((res,rej)=>{
+    const fr = new FileReader();
+    fr.onload = ()=>res(String(fr.result||''));
+    fr.onerror = ()=>rej(new Error('read failed'));
+    fr.readAsText(file);
+  });
+}
+function pearson(xs, ys){
+  const n = Math.min(xs.length, ys.length);
+  if(n<3) return NaN;
+  let sx=0, sy=0, sxx=0, syy=0, sxy=0;
+  for(let i=0;i<n;i++){
+    const x=xs[i], y=ys[i];
+    sx+=x; sy+=y; sxx+=x*x; syy+=y*y; sxy+=x*y;
+  }
+  const cov = (sxy/n) - (sx/n)*(sy/n);
+  const vx = (sxx/n) - (sx/n)*(sx/n);
+  const vy = (syy/n) - (sy/n)*(sy/n);
+  const den = Math.sqrt(vx*vy);
+  return den>0 ? (cov/den) : NaN;
+}
+function buildCorrelationPoints(){
+  const sess = getActiveSession();
+  if(!sess || !sess.rounds || !sess.rounds.length) { state.corr.last = {traceKey:null, vertKey:null, matched:0, total:0}; return []; }
+  if(!state.shotLedger || !state.shotLedger.rows || !state.shotLedger.rows.length) { state.corr.last = {traceKey:null, vertKey:null, matched:0, total:sess.rounds.length}; return []; }
+
+  const rows = state.shotLedger.rows;
+  const keys = Object.keys(rows[0]||{});
+
+  // detect vertical column (ShotMarker exports often use "Vert (MOA)")
+  const vertKey = inferColumn(keys, ['vert(moa)','vert','vertical(moa)','vertical','verticalmoa','verticalin','vmoa','vin','v']);
+
+  // choose join key
+  let joinMode = (els.corrJoin && els.corrJoin.value) ? els.corrJoin.value : 'auto';
+  let traceKey = null;
+
+  if(joinMode === 'amp'){
+    traceKey = inferColumn(keys, ['amp#','amp #','amp no','amp number','amp']);
+  } else if(joinMode === 'shot'){
+    traceKey = inferColumn(keys, ['shot#','shot #','shotno','shot no','shot']);
+  } else if(joinMode === 'instring'){
+    traceKey = inferColumn(keys, ['#instring','# in string','instring','stringindex','indexinstring']);
+  } else {
+    // auto preference order: AMP # (best), Shot #, # in String, then generic trace-like fields
+    traceKey =
+      inferColumn(keys, ['amp#','amp #','amp no','amp number']) ||
+      inferColumn(keys, ['shot#','shot #','shotno','shot no']) ||
+      inferColumn(keys, ['#instring','# in string','instring','stringindex']) ||
+      inferColumn(keys, ['trace','traceno','trace#','round','round#','index']);
+  }
+
+  state.corr.last = {traceKey, vertKey, matched:0, total:sess.rounds.length};
+
+  if(!traceKey || !vertKey) return [];
+
+  // map shotledger by join number
+  const map = new Map();
+  rows.forEach(r=>{
+    const t = Number(String(r[traceKey]??'').replace(/[^0-9.\-]/g,''));
+    const v = Number(String(r[vertKey]??'').replace(/[^0-9.\-]/g,''));
+    if(Number.isFinite(t) && Number.isFinite(v)) map.set(t, v);
+  });
+
+  const pts=[];
+  sess.rounds.forEach(r=>{
+    const t = Number(r.traceIndex||r.trace||r.traceNo||r.traceNum);
+    if(!Number.isFinite(t)) return;
+    if(!Number.isFinite(r.peakForce)) return;
+    if(!map.has(t)) return;
+    pts.push({trace:t, x:r.peakForce, y:map.get(t), flyer:!!r.flyer, excluded:!!r.excluded, r});
+  });
+
+  state.corr.last.matched = pts.length;
+  return pts;
+}
+function renderCorrelationView(){
+  if(!els.corrWrap) return;
+  const sess = getActiveSession();
+  const pts = buildCorrelationPoints();
+  state.corr.points = pts;
+
+  // status chips
+  if(!state.shotLedger){
+    els.corrStatus.textContent = 'No ShotLedger file loaded';
+    els.corrStatus.title = 'Import a ShotLedger/ShotMarker export (CSV/TSV) that contains a join column (AMP # or Shot #) and a vertical column (e.g., Vert (MOA)).';
+  } else {
+    const last = state.corr.last || {};
+    const joinLabel = last.traceKey ? `join: ${last.traceKey}` : 'join: —';
+    const vertLabel = last.vertKey ? `vert: ${last.vertKey}` : 'vert: —';
+    const matchLabel = (Number.isFinite(last.matched) && Number.isFinite(last.total)) ? `matched ${last.matched}/${last.total}` : '';
+    els.corrStatus.textContent = `ShotLedger loaded • ${matchLabel}`;
+    els.corrStatus.title = `${state.shotLedger.name||''}
+${joinLabel} • ${vertLabel}`;
+  }
+
+  // table
+  if(els.corrTbody){
+    els.corrTbody.innerHTML = pts.map(p=>`
+      <tr>
+        <td class="mono">Trace ${p.trace}</td>
+        <td class="mono">${fmt(p.x,3)}</td>
+        <td class="mono">${fmt(p.y,3)}</td>
+        <td><span class="pill ${p.flyer?'bad':'ok'}">${p.flyer?'true':'false'}</span></td>
+        <td><span class="pill ${p.excluded?'warn':'ok'}">${p.excluded?'true':'false'}</span></td>
+      </tr>
+    `).join('') || `<tr><td colspan="5" class="small">No matched points yet. Import a CSV with Trace and Vertical columns.</td></tr>`;
+  }
+
+  // chart
+  const c = els.corrChart;
+  if(!c) return;
+  // ensure canvas matches displayed size (important when switching tabs)
+  const rect = c.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const wantW = Math.max(320, Math.floor(rect.width * dpr));
+  const wantH = Math.max(240, Math.floor(rect.height * dpr));
+  if(c.width !== wantW || c.height !== wantH){ c.width = wantW; c.height = wantH; }
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0,0,W,H);
+
+  if(!sess){
+    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.font='14px ui-sans-serif';
+    ctx.fillText('Load a session to view correlation.', 12, 22);
+    return;
+  }
+  if(!pts.length){
+    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.font='14px ui-sans-serif';
+    ctx.fillText('Import a ShotLedger CSV with Trace + Vertical to plot correlation.', 12, 22);
+    return;
+  }
+
+  const xs = pts.map(p=>p.x), ys = pts.map(p=>p.y);
+  const r = pearson(xs, ys);
+  els.corrStats.textContent = Number.isFinite(r) ? ('r: '+fmt(r,3)) : 'r: —';
+  els.corrStats.title = Number.isFinite(r) ? 'Pearson correlation (Peak Force vs Vertical)' : '—';
+
+  const xPad=34, yPad=18, plotW=W-xPad-18, plotH=H-yPad-26;
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  const padX=(maxX-minX)*0.08 || 1;
+  const padY=(maxY-minY)*0.10 || 1;
+  const x0=minX-padX, x1=maxX+padX;
+  const y0=minY-padY, y1=maxY+padY;
+  const X = (v)=> xPad + ((v-x0)/(x1-x0))*plotW;
+  const Y = (v)=> yPad + (1-((v-y0)/(y1-y0)))*plotH;
+
+  // axes
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(xPad, yPad); ctx.lineTo(xPad, yPad+plotH); ctx.lineTo(xPad+plotW, yPad+plotH); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.55)'; ctx.font='12px ui-sans-serif';
+  ctx.fillText('Peak Force (lb)', xPad+6, yPad+plotH+18);
+  ctx.save(); ctx.translate(12, yPad+plotH/2); ctx.rotate(-Math.PI/2); ctx.fillText('Vertical (units)', 0, 0); ctx.restore();
+
+  // regression line (simple least squares)
+  let sx=0, sy=0, sxx=0, sxy=0, n=pts.length;
+  pts.forEach(p=>{ sx+=p.x; sy+=p.y; sxx+=p.x*p.x; sxy+=p.x*p.y; });
+  const denom = (n*sxx - sx*sx);
+  if(Math.abs(denom)>1e-9){
+    const m = (n*sxy - sx*sy)/denom;
+    const b = (sy - m*sx)/n;
+    const yA = m*x0 + b, yB = m*x1 + b;
+    ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.moveTo(X(x0), Y(yA)); ctx.lineTo(X(x1), Y(yB)); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // points
+  pts.forEach(p=>{
+    const xx=X(p.x), yy=Y(p.y);
+    let fill='rgba(124,220,255,.90)', rad=4, stroke=null, lw=2;
+    if(p.excluded){ fill='rgba(200,200,210,.55)'; rad=3.5; }
+    if(p.flyer){ stroke='rgba(255,85,85,.95)'; lw=2.5; }
+    ctx.beginPath(); ctx.fillStyle=fill; ctx.arc(xx,yy,rad,0,Math.PI*2); ctx.fill();
+    if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.stroke(); }
+  });
+}
+
+async function handleCorrFile(file){
+  try{
+    const txt = await readAsText(file);
+    const rows = parseSimpleCSV(txt);
+    state.shotLedger = { name: file.name, rows };
+    renderCorrelationView();
+  } catch(e){
+    alert('Could not read correlation file.');
+  }
+}
+
 // Trace chart controls
+initTraceChartHover();
+
 if(els.tcOverlayWork) els.tcOverlayWork.addEventListener('change', ()=>{ state.traceChart.overlayWork = els.tcOverlayWork.checked; renderTraceChart(); });
 if(els.tcUseFiltered) els.tcUseFiltered.addEventListener('change', ()=>{ state.traceChart.useFiltered = els.tcUseFiltered.checked; renderTraceChart(); });
 if(els.tcShowExcluded) els.tcShowExcluded.addEventListener('change', ()=>{ state.traceChart.showExcluded = els.tcShowExcluded.checked; renderTraceChart(); });
@@ -1887,5 +2238,7 @@ render();
   };
 })();
 </script>
+
+<div id="floatTip" style="position:fixed; display:none; z-index:50; max-width:360px; background:rgba(8,12,20,.92); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 10px; box-shadow:0 10px 30px rgba(0,0,0,.35); font-size:12px; color:rgba(255,255,255,.92); pointer-events:none"></div>
 </body>
 </html>
