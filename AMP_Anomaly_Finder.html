@@ -3,222 +3,438 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>AMP CSV Anomaly Finder (offline)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AMP CSV Anomaly + Curve Diagnostics</title>
 <style>
   :root{
-    --bg:#0b0f14; --panel:#0f1722; --panel2:#111b28; --text:#e6edf3; --muted:#9fb0c0;
-    --line:rgba(255,255,255,.08); --accent:#7dd3fc; --good:#22c55e; --warn:#fbbf24; --bad:#fb7185; --hot:#f97316;
-    --chip:#162235;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    --bg0:#0b1220; --bg1:#0f1b2e; --card:#0f2234cc; --card2:#0b1a2b;
+    --txt:#e6eef7; --mut:#9bb0c8; --line:#1f3550;
+    --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --mid:#38bdf8; --hi:#a78bfa;
   }
-  html,body{height:100%}
-  body{margin:0;background:radial-gradient(1200px 800px at 30% -10%, rgba(125,211,252,.10), transparent 55%),
-                  radial-gradient(1000px 700px at 90% 10%, rgba(251,113,133,.08), transparent 55%),
-                  var(--bg);
-       color:var(--text); font-family:var(--sans);}
-  .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 30px;}
-  header{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px;}
-  .title{display:flex;flex-direction:column;gap:2px}
-  h1{font-size:18px;margin:0;letter-spacing:.2px}
-  .sub{font-size:12px;color:var(--muted);line-height:1.35}
-  .row{display:grid;grid-template-columns: 420px 1fr; gap:12px; align-items:start}
-  @media (max-width: 980px){ .row{grid-template-columns:1fr;} }
-  .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-        border:1px solid var(--line); border-radius:14px; padding:12px; box-shadow: 0 12px 30px rgba(0,0,0,.22);}
-  .card h2{font-size:13px;margin:0 0 10px 0;color:var(--text);letter-spacing:.2px}
-  .drop{border:1px dashed rgba(125,211,252,.35); border-radius:14px; padding:14px; background:rgba(125,211,252,.05);
-        display:flex; gap:12px; align-items:flex-start}
-  .drop.drag{background:rgba(125,211,252,.10); border-color:rgba(125,211,252,.65)}
-  .drop .icon{width:34px;height:34px;border-radius:10px;background:rgba(125,211,252,.12);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
-  .btn{background:rgba(125,211,252,.14); color:var(--text); border:1px solid rgba(125,211,252,.35);
-       padding:8px 10px; border-radius:10px; cursor:pointer; font-size:12px}
-  .btn:hover{background:rgba(125,211,252,.18)}
-  .btn.ghost{background:transparent;border-color:var(--line)}
-  .btn.danger{background:rgba(251,113,133,.13);border-color:rgba(251,113,133,.35)}
-  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-  .field{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--line);padding:8px 10px;border-radius:12px}
-  .field label{font-size:12px;color:var(--muted)}
-  .field input[type="range"]{width:150px}
-  select,input[type="text"]{background:rgba(15,23,34,.8);color:var(--text);border:1px solid var(--line);
-     border-radius:10px;padding:7px 9px;font-size:12px;outline:none}
-  input[type="checkbox"]{transform: translateY(1px)}
-  .kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
-  @media (max-width:600px){.kpi{grid-template-columns:1fr}}
-  .k{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px;padding:10px}
-  .k .lab{font-size:11px;color:var(--muted)}
-  .k .val{font-size:18px;margin-top:4px;font-weight:700}
-  .small{font-size:11px;color:var(--muted)}
-  .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:11px;color:var(--muted)}
-  .pill b{color:var(--text)}
-  .tableWrap{overflow:auto;border-radius:14px;border:1px solid var(--line)}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  thead th{position:sticky;top:0;background:rgba(15,23,34,.95);backdrop-filter: blur(6px); z-index:2;
-           text-align:left;padding:10px;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;white-space:nowrap}
-  tbody td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap}
-  tbody tr:hover{outline:1px solid rgba(125,211,252,.28); outline-offset:-1px}
-  .mono{font-family:var(--mono)}
-  .scoreCell{font-weight:700}
-  .tag{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
-  .dot{width:8px;height:8px;border-radius:99px;display:inline-block}
-  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
-  .legend .tag{font-size:11px}
-  .footer{margin-top:10px;color:var(--muted);font-size:11px;line-height:1.35}
-  .muted{color:var(--muted)}
-  .right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .warnBox{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.25);padding:10px;border-radius:12px;color:var(--text);font-size:12px}
-  .hint{margin-top:6px;color:var(--muted);font-size:11px}
+  *{box-sizing:border-box}
+  body{
+    margin:0; color:var(--txt); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    background:
+      radial-gradient(1100px 600px at 20% -10%, rgba(56,189,248,.18), transparent 60%),
+      radial-gradient(1000px 600px at 85% 0%, rgba(167,139,250,.14), transparent 55%),
+      linear-gradient(180deg, var(--bg0), #050914);
+    min-height:100vh;
+  }
+  header{
+    padding:18px 18px 10px;
+    display:flex; gap:12px; align-items:flex-end; justify-content:space-between;
+  }
+  header h1{margin:0; font-size:18px; letter-spacing:.2px}
+  header .sub{margin:2px 0 0; color:var(--mut); font-size:12px}
+  header .right{display:flex; gap:10px; align-items:center}
+  .pill{
+    font-size:12px; color:var(--mut); border:1px solid var(--line); padding:6px 10px; border-radius:999px;
+    background:rgba(15,34,52,.55);
+  }
+  main{display:grid; grid-template-columns: 340px 1fr; gap:14px; padding:0 14px 16px;}
+  .card{
+    border:1px solid rgba(31,53,80,.7);
+    background: linear-gradient(180deg, rgba(15,34,52,.72), rgba(11,26,43,.62));
+    box-shadow: 0 12px 30px rgba(0,0,0,.25);
+    border-radius:16px;
+    overflow:hidden;
+  }
+  .card h2{margin:0; padding:12px 14px; font-size:13px; letter-spacing:.2px; border-bottom:1px solid rgba(31,53,80,.6); color:#d8e6f8}
+  .card .body{padding:12px 14px}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .btn{
+    background:#12314c; border:1px solid rgba(56,189,248,.35);
+    color:var(--txt); padding:8px 10px; border-radius:12px; cursor:pointer; font-weight:600; font-size:12px;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn.secondary{background:transparent; border:1px solid rgba(31,53,80,.9); color:var(--mut)}
+  input[type="file"]{display:none}
+  .drop{
+    border:1px dashed rgba(56,189,248,.45);
+    border-radius:14px; padding:12px; background:rgba(3,11,22,.35);
+    color:var(--mut); font-size:12px;
+  }
+  .drop strong{color:var(--txt)}
+  .kv{display:grid; grid-template-columns: 1fr auto; gap:6px 10px; margin-top:10px; font-size:12px}
+  .kv div:nth-child(odd){color:var(--mut)}
+  .kv div:nth-child(even){font-variant-numeric: tabular-nums;}
+  .control{margin-top:10px}
+  label{font-size:12px; color:var(--mut)}
+  input[type="range"]{width:100%}
+  select, input[type="text"]{
+    width:100%;
+    background:rgba(3,11,22,.5);
+    border:1px solid rgba(31,53,80,.85);
+    color:var(--txt);
+    padding:9px 10px; border-radius:12px; outline:none;
+  }
+  select:focus, input[type="text"]:focus{border-color:rgba(56,189,248,.65)}
+  .hint{font-size:12px; color:var(--mut); line-height:1.35}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+  .split{display:flex; gap:10px}
+  .split > *{flex:1}
+  .tog{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; color:var(--mut)}
+  .tog input{transform: translateY(1px)}
+  .badges{display:flex; gap:6px; flex-wrap:wrap}
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 8px; border-radius:999px; font-size:11px; border:1px solid rgba(31,53,80,.8);
+    background:rgba(3,11,22,.35); color:var(--mut);
+  }
+  .dot{width:8px; height:8px; border-radius:999px; display:inline-block}
+  .dot.good{background:var(--good)}
+  .dot.mid{background:var(--mid)}
+  .dot.hi{background:var(--hi)}
+  .dot.warn{background:var(--warn)}
+  .dot.bad{background:var(--bad)}
+  /* Right side table */
+  .tableWrap{overflow:auto; max-height: calc(100vh - 120px);}
+  table{width:100%; border-collapse:separate; border-spacing:0; font-size:12px}
+  thead th{
+    position:sticky; top:0; z-index:2;
+    background:rgba(9,20,34,.95);
+    border-bottom:1px solid rgba(31,53,80,.9);
+    padding:10px 10px; text-align:left; color:#cfe1f5; font-weight:700;
+    white-space:nowrap;
+  }
+  tbody td{
+    border-bottom:1px solid rgba(31,53,80,.35);
+    padding:8px 10px; vertical-align:middle;
+  }
+  tbody tr:hover{background:rgba(56,189,248,.06)}
+  tbody tr.normal{background:transparent}
+  tbody tr.moderate{background:rgba(56,189,248,.06)}
+  tbody tr.high{background:rgba(245,158,11,.08)}
+  tbody tr.flyer{background:rgba(239,68,68,.10)}
+  .sessionBar{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    padding:10px 14px; border-bottom:1px solid rgba(31,53,80,.6);
+  }
+  .sessionPill{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid rgba(31,53,80,.85);
+    background:rgba(3,11,22,.35);
+    padding:8px 10px; border-radius:999px; max-width:100%;
+    min-width:0;
+  }
+  .sessionPill .label{
+    min-width:0; max-width:100%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:12px; color:var(--txt); font-weight:700;
+  }
+  .sessionPill .meta{font-size:11px; color:var(--mut); white-space:nowrap}
+  .chip{
+    font-size:11px; color:var(--mut); border:1px solid rgba(31,53,80,.8);
+    padding:4px 8px; border-radius:999px; background:rgba(3,11,22,.25);
+  }
+  .warnBox{
+    margin:12px 14px; padding:12px; border-radius:14px;
+    border:1px solid rgba(245,158,11,.35);
+    background:rgba(245,158,11,.08); color:#f7d9a5;
+  }
+  .kbd{font-family:ui-monospace; font-size:11px; padding:1px 6px; border:1px solid rgba(31,53,80,.9); border-radius:6px; background:rgba(3,11,22,.35); color:var(--mut)}
+  .small{font-size:11px; color:var(--mut)}
+  .nowrap{white-space:nowrap}
+
+/* v2.1 patches */
+.control select{max-width:100%; width:100%;}
+.sessionPill .label{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;}
+tr.excluded{opacity:.55;}
+.viewTabs{display:flex; gap:8px; align-items:center;}
+.viewTabs .tabbtn{padding:7px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:var(--txt); cursor:pointer; font-weight:600;}
+.viewTabs .tabbtn.active{background:rgba(124,220,255,.18); border-color:rgba(124,220,255,.35);}
+.sessionsWrap{display:none;}
+.sessionsWrap table{width:100%; border-collapse:separate; border-spacing:0 10px;}
+.sessionsWrap th{font-size:12px; color:var(--mut); text-align:left; padding:0 10px;}
+.sessionsWrap td{padding:10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);}
+.sessionsWrap tr:hover td{background:rgba(255,255,255,.06); cursor:pointer;}
+
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="title">
-      <h1>AMP CSV Anomaly Finder</h1>
-      <div class="sub">Drop one or more AMP “Press” CSV exports. The tool reshapes traces into round-by-round rows, scores “weirdness” using robust z-scores, and highlights anomalies. Runs 100% locally in your browser.</div>
-    </div>
-    <div class="right">
-      <span class="pill"><b>Offline</b> · single HTML</span>
-      <button class="btn ghost" id="btnExport">Export shown rows (CSV)</button>
-      <button class="btn danger" id="btnClear">Clear</button>
-    </div>
-  </header>
-
-  <div class="row">
-    <section class="card">
-      <h2>Upload</h2>
-      <div class="drop" id="drop">
-        <div class="icon">⇪</div>
-        <div>
-          <div style="font-weight:700; margin-bottom:6px;">Drop AMP CSV files here</div>
-          <div class="small">Or click to select. Each file becomes a “session”.</div>
-          <input type="file" id="file" accept=".csv,text/csv" multiple style="display:none"/>
-          <div class="controls">
-            <button class="btn" id="btnPick">Choose files</button>
-            <div class="field">
-              <label>Session</label>
-              <select id="sessionSel"></select>
-            </div>
-          </div>
-          <div class="hint">Tip: your AMP export is often “wide” (variables in rows, Trace 1..N in columns). This tool expects that format.</div>
-        </div>
-      </div>
-
-      <div style="height:10px"></div>
-
-      <h2>Scoring + Filters</h2>
-      <div class="controls">
-        <div class="field">
-          <label>Anomaly threshold</label>
-          <input type="range" id="thr" min="0.5" max="6" step="0.1" value="2.5"/>
-          <span class="mono" id="thrVal">2.5</span>
-        </div>
-
-        <div class="field">
-          <label><input type="checkbox" id="onlyAnom"> Only anomalies</label>
-        </div>
-
-        <div class="field">
-          <label>Search</label>
-          <input type="text" id="q" placeholder="e.g. Trace 44, flyer, peak…" style="width:190px"/>
-        </div>
-
-        <div class="field">
-          <label>Sort</label>
-          <select id="sortSel">
-            <option value="scoreDesc">Score ↓</option>
-            <option value="scoreAsc">Score ↑</option>
-            <option value="traceAsc">Trace ↑</option>
-            <option value="peakDesc">Peak Force ↓</option>
-            <option value="workDesc">Work Done ↓</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="height:10px"></div>
-
-      <div class="kpi" id="kpis">
-        <div class="k"><div class="lab">Rounds</div><div class="val" id="kRounds">—</div></div>
-        <div class="k"><div class="lab">Anomalies</div><div class="val" id="kAnom">—</div></div>
-        <div class="k"><div class="lab">Peak Force median</div><div class="val" id="kPeak">—</div><div class="small muted" id="kPeak2"></div></div>
-      </div>
-
-      <div class="legend">
-        <span class="tag"><span class="dot" style="background:var(--good)"></span>Normal</span>
-        <span class="tag"><span class="dot" style="background:var(--warn)"></span>Moderate</span>
-        <span class="tag"><span class="dot" style="background:var(--hot)"></span>High</span>
-        <span class="tag"><span class="dot" style="background:var(--bad)"></span>Extreme</span>
-      </div>
-
-      <div class="footer">
-        Scoring uses robust z-scores (median/MAD) on: <span class="mono">Peak Force</span>, <span class="mono">Work Done</span>,
-        <span class="mono">Starting Pos</span>, <span class="mono">Terminal Force</span>. “Flyer=true” gets a score bump.
-        You can change the threshold to be more/less picky.
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Rounds</h2>
-      <div id="empty" class="warnBox" style="display:block">
-        Upload one or more AMP CSV files to see a scored table here.
-        <div class="hint">If your export is a different AMP format, tell me what the headers look like and I’ll adapt the parser.</div>
-      </div>
-      <div class="tableWrap" id="tableWrap" style="display:none">
-        <table>
-          <thead>
-            <tr>
-              <th>Trace</th>
-              <th>Flyer</th>
-              <th>Anomaly</th>
-              <th>Score</th>
-              <th>Driver</th>
-              <th class="mono">Peak Force</th>
-              <th class="mono">Work Done</th>
-              <th class="mono">Starting Pos</th>
-              <th class="mono">Terminal Force</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </section>
+<header>
+  <div>
+    <h1>AMP CSV Anomaly Finder <span class="pill">offline</span></h1>
+    <div class="sub">Upload AMP “Press” CSV exports (wide). Scores anomalies + adds curve diagnostics (early spike, jaggedness, end flat/drop) when curve data exists.</div>
   </div>
+  <div class="right">
+    <button class="btn secondary" id="btnExport">Export shown (CSV)</button>
+    <button class="btn secondary" id="btnClear">Clear</button>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Upload & Controls</h2>
+    <div class="body">
+      <div class="row">
+        <label class="btn" for="fileIn">Choose files</label>
+        <input id="fileIn" type="file" accept=".csv,text/csv" multiple/>
+      </div>
+
+      <div id="drop" class="drop" style="margin-top:10px">
+        <strong>Drop AMP CSV files here</strong><br/>
+        <span class="small">Each file becomes a session. Works offline (no internet needed).</span>
+      </div>
+
+      <div class="control" style="margin-top:12px">
+        <label>Session</label>
+        <select id="sessionSel"></select>
+        <div class="hint" style="margin-top:6px">
+          Tip: AMP export is often <span class="mono">wide</span> (variables in rows, <span class="mono">Trace 1..N</span> in columns). This tool expects that.
+        </div>
+      </div>
+
+      <div class="control">
+        <label>Anomaly threshold: <span class="mono" id="thVal">2.50</span></label>
+        <input id="th" type="range" min="0.5" max="5.0" step="0.05" value="2.5"/>
+        <div class="tog"><input id="onlyAnom" type="checkbox"/><label for="onlyAnom">Only anomalies</label></div>
+      
+      <div class="control">
+        <label>Peak Force ES limit (lb): <span class="mono" id="esVal">20</span></label>
+        <input id="es" type="range" min="5" max="50" step="1" value="20"/>
+        <div class="tog"><input id="esAuto" type="checkbox" checked/><label for="esAuto">Auto-exclude ES extremes (top/bottom) when limit exceeded</label></div>
+        <div class="hint" style="margin-top:6px">
+          ES here is <span class="mono">max(peak)-min(peak)</span> for the session. If it exceeds the limit, the max and min traces are marked <span class="mono">Excluded</span> but remain visible for learning.
+        </div>
+      </div>
+
+      <div class="control">
+        <div class="tog"><input id="hideEx" type="checkbox"/><label for="hideEx">Hide excluded rounds</label></div>
+      </div>
 </div>
 
+      <div class="control">
+        <label>Search</label>
+        <input id="q" type="text" placeholder="trace, driver, cause…"/>
+      </div>
+
+      <div class="control">
+        <div class="split">
+          <div>
+            <label>Sort</label>
+            <select id="sortSel">
+              <option value="score_desc">Score (high → low)</option>
+              <option value="score_asc">Score (low → high)</option>
+              <option value="trace_asc">Trace (asc)</option>
+              <option value="trace_desc">Trace (desc)</option>
+              <option value="peak_desc">Peak Force (high → low)</option>
+              <option value="work_desc">Work Done (high → low)</option>
+              <option value="rough_desc">Roughness (high → low)</option>
+            </select>
+          </div>
+          <div>
+            <label>Baseline</label>
+            <select id="baseSel">
+              <option value="none">No baseline</option>
+              <option value="active">Active session</option>
+              <option value="custom">Saved baseline</option>
+            </select>
+            <div class="row" style="margin-top:8px">
+              <button class="btn secondary" id="btnSaveBase" title="Save the active session medians as baseline">Save baseline</button>
+              <button class="btn secondary" id="btnClrBase" title="Clear saved baseline">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px">
+          Baseline enables “Steeper slope overall” style detection by comparing session medians to your baseline.
+        </div>
+      </div>
+
+      <div class="control">
+        <div class="kv">
+          <div>Rounds</div><div class="mono" id="kN">—</div>
+          <div>Anomalies (≥ threshold)</div><div class="mono" id="kA">—</div>
+          <div>Peak Force median</div><div class="mono" id="kPF">—</div>
+          <div>Curve data</div><div class="mono" id="kCurve">—</div>
+        </div>
+      </div>
+
+      <div class="control">
+        <div class="badges">
+          <span class="badge"><span class="dot good"></span> Normal</span>
+          <span class="badge"><span class="dot mid"></span> Moderate</span>
+          <span class="badge"><span class="dot warn"></span> High</span>
+          <span class="badge"><span class="dot bad"></span> Flyer</span>
+        </div>
+      </div>
+
+      <div class="control" style="margin-top:12px">
+        <details>
+          <summary class="hint">What diagnostics mean (click)</summary>
+          <div class="hint" style="margin-top:8px">
+            <div><b>Early Spike</b>: unusually high force early in the seating stroke → often chamfer/case mouth/donut.</div>
+            <div><b>Jagged</b>: high “roughness” (curve jitter) → carbon/corrosion/neck-wall inconsistency.</div>
+            <div><b>End Flat/Drop</b>: unusually flat or dropping end segment → bearing-surface transition; if inconsistent, investigate setup/components.</div>
+            <div><b>Force Outlier</b>: Peak/Work/Terminal unusually high/low → neck tension / sizing / anneal variance.</div>
+          </div>
+        </details>
+      </div>
+
+      <div class="warnBox" style="display:none" id="injWarn">
+        <b>Heads up:</b> Your browser appears to have a script/extension injecting ad/redirect code into pages.
+        This tool runs offline and does not load remote URLs. If you see network calls to random domains, try Incognito or remove the extension.
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Rounds</h2>
+    <div class="sessionBar">
+      <div class="sessionPill" style="flex:1">
+        <span class="chip">Session</span>
+        <span class="label" id="sessLabel" title="—">—</span>
+        <span class="meta" id="sessMeta">—</span>
+      </div>
+      <div class="viewTabs" style="margin-left:auto">
+        <button class="tabbtn active" id="tabRounds" type="button">Rounds</button>
+        <button class="tabbtn" id="tabSessions" type="button">Sessions</button>
+      </div>
+      <span class="chip" id="curveChip">Curve: —</span>
+      <span class="chip" id="baseChip">Baseline: none</span>
+      <span class="chip" id="showChip">Shown: —</span>
+    </div>
+
+    <div id="empty" class="warnBox">
+      Upload one or more AMP CSV files to see a scored table here.
+      <div class="hint">If your AMP export layout is different, paste a few header lines and I’ll adapt the parser.</div>
+    </div>
+
+    <div class="tableWrap" id="tableWrap" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Trace</th>
+            <th>Flyer</th>
+            <th>Excluded</th>
+            <th>Tag</th>
+            <th>Why</th>
+            <th>Cause</th>
+            <th>Conf</th>
+            <th>Score</th>
+            <th>Driver</th>
+            <th class="nowrap">Peak Force</th>
+            <th class="nowrap">Work Done</th>
+            <th class="nowrap">Starting Pos</th>
+            <th class="nowrap">Terminal Force</th>
+            <th class="nowrap">Early Spike</th>
+            <th class="nowrap">Jagged</th>
+            <th class="nowrap">End Flat</th>
+            <th class="nowrap">End Drop</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="sessionsWrap" id="sessionsWrap">
+      <div class="row" style="justify-content:space-between; align-items:center; margin:6px 0 10px">
+        <div class="small">Session summary across all loaded files. Click a session row to jump back to its rounds.</div>
+        <button class="btn secondary" id="btnExportSessions" type="button" title="Export session summary CSV">Export sessions (CSV)</button>
+      </div>
+      <div class="card" style="padding:10px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; margin-bottom:12px">
+        <canvas id="sessChart" width="900" height="220" style="width:100%; height:220px"></canvas>
+        <div class="hint" style="margin-top:6px">Chart shows <span class="mono">median Peak Force</span> and <span class="mono">Peak ES</span> by session order.</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Rounds</th>
+            <th>Flyers</th>
+            <th>Anomalies</th>
+            <th>Peak Med</th>
+            <th>Peak ES</th>
+            <th>Work Med</th>
+            <th>Rough Med</th>
+          </tr>
+        </thead>
+        <tbody id="sessionsTbody"></tbody>
+      </table>
+    </div>
+
+  </section>
+</main>
+
 <script>
-/* ============
-   Tiny CSV parser (handles quotes and commas).
-   ============ */
-function parseCSV(text){
-  const rows = [];
-  let i=0, field="", row=[], inQuotes=false;
-  while(i < text.length){
-    const c = text[i];
-    if(inQuotes){
-      if(c === '"'){
-        if(text[i+1] === '"'){ field+='"'; i+=2; continue; }
-        inQuotes=false; i++; continue;
-      } else { field += c; i++; continue; }
-    } else {
-      if(c === '"'){ inQuotes=true; i++; continue; }
-      if(c === ','){ row.push(field); field=""; i++; continue; }
-      if(c === '\r'){ i++; continue; }
-      if(c === '\n'){ row.push(field); rows.push(row); field=""; row=[]; i++; continue; }
-      field += c; i++; continue;
-    }
-  }
-  row.push(field);
-  // avoid trailing empty row
-  if(row.length>1 || (row.length===1 && row[0].trim()!=="")) rows.push(row);
-  return rows;
-}
+/* ========== small safety nudge (detect injected network calls via global fetch patch check) ========== */
+(function(){
+  try{
+    // If some extension overwrote fetch in a weird way, it might show as non-native.
+    const f = window.fetch;
+    const looksNative = f && (String(f).includes('[native code]') || String(f).includes('function fetch'));
+    // Not a definitive check; we only display if we already see suspicious error patterns later.
+    window.__fetchLooksNative = looksNative;
+  }catch(e){}
+})();
+
+/* ========== state ========== */
+const state = {
+  sessions: [],
+  activeIndex: 0,
+  threshold: 2.5,
+  esLimit: 20,
+  esAutoExclude: true,
+  hideExcluded: false,
+  view: 'rounds',
+  onlyAnom: false,
+  query: "",
+  sort: "score_desc",
+  baselineMode: "none", // none|active|custom
+  baseline: null, // {metrics:{key:{med}}, curves:{key:{med}}}
+  shownRows: []
+};
+
+const els = {
+  fileIn: document.getElementById('fileIn'),
+  drop: document.getElementById('drop'),
+  sessionSel: document.getElementById('sessionSel'),
+  th: document.getElementById('th'),
+  thVal: document.getElementById('thVal'),
+  es: document.getElementById('es'),
+  esVal: document.getElementById('esVal'),
+  esAuto: document.getElementById('esAuto'),
+  hideEx: document.getElementById('hideEx'),
+  onlyAnom: document.getElementById('onlyAnom'),
+  q: document.getElementById('q'),
+  sortSel: document.getElementById('sortSel'),
+  baseSel: document.getElementById('baseSel'),
+  btnSaveBase: document.getElementById('btnSaveBase'),
+  btnClrBase: document.getElementById('btnClrBase'),
+  btnExport: document.getElementById('btnExport'),
+  btnClear: document.getElementById('btnClear'),
+  empty: document.getElementById('empty'),
+  tableWrap: document.getElementById('tableWrap'),
+  tbody: document.getElementById('tbody'),
+  kN: document.getElementById('kN'),
+  kA: document.getElementById('kA'),
+  kPF: document.getElementById('kPF'),
+  kCurve: document.getElementById('kCurve'),
+  sessLabel: document.getElementById('sessLabel'),
+  sessMeta: document.getElementById('sessMeta'),
+  tabRounds: document.getElementById('tabRounds'),
+  tabSessions: document.getElementById('tabSessions'),
+  sessionsWrap: document.getElementById('sessionsWrap'),
+  sessionsTbody: document.getElementById('sessionsTbody'),
+  btnExportSessions: document.getElementById('btnExportSessions'),
+  sessChart: document.getElementById('sessChart'),
+  curveChip: document.getElementById('curveChip'),
+  baseChip: document.getElementById('baseChip'),
+  showChip: document.getElementById('showChip'),
+  curveChip2: document.getElementById('curveChip'),
+  injWarn: document.getElementById('injWarn')
+};
+
+/* ========== utils ========== */
 function toNum(x){
   if(x==null) return null;
-  const s = String(x).trim();
+  const s = String(x).trim().replace(/,/g,''); // tolerate thousands separators
   if(s==="") return null;
   const v = Number(s);
   return Number.isFinite(v) ? v : null;
+}
+function fmt(v, d=3){
+  if(!Number.isFinite(v)) return "—";
+  return Number(v).toFixed(d);
 }
 function median(arr){
   const a = arr.filter(v=>Number.isFinite(v)).slice().sort((x,y)=>x-y);
@@ -237,76 +453,132 @@ function mean(arr){
   return a.reduce((s,v)=>s+v,0)/a.length;
 }
 function stdev(arr){
+  const mu = mean(arr);
+  if(mu==null) return null;
   const a = arr.filter(v=>Number.isFinite(v));
   if(a.length<2) return null;
-  const m = mean(a);
-  const v = a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1);
+  const v = a.reduce((s,x)=>s+(x-mu)**2,0)/(a.length-1);
   return Math.sqrt(v);
 }
-function fmt(x, d=3){
-  if(x==null || !Number.isFinite(x)) return "—";
-  return x.toFixed(d);
+function robustZ(x, st){
+  // st: {med, mad, sd, mu}
+  if(!Number.isFinite(x) || st.med==null) return 0;
+  if(st.mad && st.mad>0) return 0.6745*(x-st.med)/st.mad;
+  if(st.sd && st.sd>0 && st.mu!=null) return (x-st.mu)/st.sd;
+  return 0;
 }
-function clsFromScore(s){
-  // classification buckets for legend + row tint
-  if(s >= 4) return "extreme";
-  if(s >= 3) return "high";
-  if(s >= 2) return "moderate";
+function clsFromScore(score){
+  if(score>=3.5) return "flyer";
+  if(score>=2.5) return "high";
+  if(score>=1.5) return "moderate";
   return "normal";
 }
-function colorForBucket(b){
-  if(b==="extreme") return "rgba(251,113,133,.22)";
-  if(b==="high") return "rgba(249,115,22,.18)";
-  if(b==="moderate") return "rgba(251,191,36,.14)";
-  return "rgba(34,197,94,.10)";
+function escapeHtml(s){
+  return String(s??"").replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
-function dotColor(b){
-  if(b==="extreme") return "var(--bad)";
-  if(b==="high") return "var(--hot)";
-  if(b==="moderate") return "var(--warn)";
-  return "var(--good)";
+function pickDot(bucket){
+  if(bucket==="flyer") return "bad";
+  if(bucket==="high") return "warn";
+  if(bucket==="moderate") return "mid";
+  return "good";
 }
 
-/* ============
-   Data model
-   ============ */
-const state = {
-  sessions: [], // {name, rounds, stats}
-  activeIdx: -1,
-  threshold: 2.5,
-  onlyAnom: false,
-  query: "",
-  sort: "scoreDesc"
-};
+/* ========== CSV parser (handles quotes) ========== */
+function parseCSV(text){
+  // sniff delimiter (comma vs semicolon)
+  const firstLine = (text.split(/\r?\n/).find(l=>l.trim().length) || "");
+  const comma = (firstLine.match(/,/g)||[]).length;
+  const semi  = (firstLine.match(/;/g)||[]).length;
+  const delim = semi>comma ? ';' : ',';
 
-function reshapeAmpWide(rows, filename){
-  // rows: array of arrays. First row is header: ["", "Trace 1", "Trace 2", ...]
-  // First col is variable name; other columns are trace values.
-  if(!rows || rows.length<2) throw new Error("Empty CSV");
-  const header = rows[0].map(x => (x ?? "").trim());
-  if(header.length < 3) throw new Error("CSV header too short");
-  const traceCols = header.slice(1);
-  const n = traceCols.length;
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let inQ = false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i];
+    if(inQ){
+      if(ch === '"'){
+        const next = text[i+1];
+        if(next === '"'){ cur+='"'; i++; }
+        else inQ = false;
+      } else cur += ch;
+    } else {
+      if(ch === '"') inQ = true;
+      else if(ch === delim){
+        row.push(cur); cur="";
+      } else if(ch === '\n'){
+        row.push(cur); rows.push(row);
+        row=[]; cur="";
+      } else if(ch === '\r'){
+        // ignore
+      } else cur += ch;
+    }
+  }
+  row.push(cur); rows.push(row);
+  // trim trailing empty rows
+  while(rows.length && rows[rows.length-1].every(c=>String(c??"").trim()==="")) rows.pop();
+  return rows;
+}
+function isRowEmpty(r){ return !r || r.every(c=>String(c??"").trim()===""); }
+function splitBlocks(rows){
+  const blocks = [];
+  let cur = [];
+  for(const r of rows){
+    if(isRowEmpty(r)){
+      if(cur.length){ blocks.push(cur); cur=[]; }
+    } else cur.push(r);
+  }
+  if(cur.length) blocks.push(cur);
+  return blocks;
+}
 
-  const map = new Map(); // varName => values (len n)
-  for(let r=1; r<rows.length; r++){
-    const varName = (rows[r][0] ?? "").trim();
+/* ========== AMP reshape ========== */
+function detectTraceHeader(header){
+  // Returns indices of trace columns and their names.
+  const cols = [];
+  for(let i=0;i<header.length;i++){
+    const h = String(header[i]??"").trim();
+    if(/^(trace\s*\d+|trace\d+)$/i.test(h) || /^Trace\s*\d+/i.test(h)){
+      cols.push({i, name:h});
+    }
+  }
+  // If none, try all columns after first as traces if "Trace" appears anywhere
+  if(!cols.length){
+    const anyTrace = header.some(h=>/trace/i.test(String(h||"")));
+    if(anyTrace && header.length>=3){
+      for(let i=1;i<header.length;i++){
+        cols.push({i, name:String(header[i]??`Trace ${i}`).trim() || `Trace ${i}`});
+      }
+    }
+  }
+  return cols;
+}
+
+function parseMetricBlock(block){
+  // wide: first row header: ["", "Trace 1", ...]
+  const header = block[0].map(x => String(x??"").trim());
+  const traces = header.slice(1).map((h,i)=>h||`Trace ${i+1}`);
+  const n = traces.length;
+  if(n<1) return null;
+
+  // map varName -> array (len n)
+  const map = new Map();
+  for(let r=1;r<block.length;r++){
+    const varName = String(block[r][0]??"").trim();
     if(!varName) continue;
     const vals = [];
-    for(let c=1; c<header.length; c++){
-      vals.push(rows[r][c] ?? "");
+    for(let c=1;c<1+n;c++){
+      vals.push(block[r][c] ?? "");
     }
     map.set(varName, vals);
   }
-
-  // helper to fetch a row by canonical key (case-insensitive)
   function getVar(keys){
     for(const k of keys){
       for(const [name, vals] of map.entries()){
         if(name.toLowerCase() === k.toLowerCase()) return {name, vals};
       }
     }
-    // fuzzy contains (backup)
     for(const k of keys){
       for(const [name, vals] of map.entries()){
         if(name.toLowerCase().includes(k.toLowerCase())) return {name, vals};
@@ -321,334 +593,936 @@ function reshapeAmpWide(rows, filename){
   const startRow = getVar(["Starting Pos","Starting Position"]);
   const termRow  = getVar(["Terminal Force"]);
 
-  if(!peakRow && !workRow && !startRow && !termRow){
-    throw new Error("Couldn't find AMP metric rows (Peak Force/Work Done/etc).");
-  }
+  if(!peakRow && !workRow && !startRow && !termRow) return null;
 
   const rounds = [];
   for(let i=0;i<n;i++){
-    const traceName = traceCols[i] || `Trace ${i+1}`;
-    const flyer = flyerRow ? String((flyerRow.vals[i] ?? "")).trim().toLowerCase()==="true" : false;
-    const peak  = peakRow  ? toNum(peakRow.vals[i]) : null;
-    const work  = workRow  ? toNum(workRow.vals[i]) : null;
-    const start = startRow ? toNum(startRow.vals[i]) : null;
-    const term  = termRow  ? toNum(termRow.vals[i]) : null;
-
+    const traceName = traces[i] || `Trace ${i+1}`;
+    const flyer = flyerRow ? String(flyerRow.vals[i]??"").trim().toLowerCase()==="true" : false;
     rounds.push({
-      session: filename,
+      traceIndex: i+1,
       trace: traceName,
-      traceIdx: i+1,
-      flyer,
-      peakForce: peak,
-      workDone: work,
-      startingPos: start,
-      terminalForce: term,
-      // computed
+      flyerRaw: flyer,
+      flyer: flyer,
+      peakForce: peakRow ? toNum(peakRow.vals[i]) : null,
+      workDone: workRow ? toNum(workRow.vals[i]) : null,
+      startingPos: startRow ? toNum(startRow.vals[i]) : null,
+      terminalForce: termRow ? toNum(termRow.vals[i]) : null,
+      curve: null, // {x:[], y:[]}
+      // curve features
+      earlySpike: null,
+      roughness: null,
+      endFlat: null,
+      endDrop: null,
+      midSlope: null,
+      // scoring
+      z: {},
       score: 0,
       bucket: "normal",
       driver: "—",
-      z: {}
+      diags: [],
+      cause: "—",
+      conf: 0
     });
   }
+  return {rounds, map, n};
+}
 
-  // compute robust z for each metric
-  const metrics = [
-    {key:"peakForce", label:"Peak Force", w: 1.00},
-    {key:"workDone", label:"Work Done", w: 0.85},
-    {key:"startingPos", label:"Starting Pos", w: 0.70},
-    {key:"terminalForce", label:"Terminal Force", w: 0.70}
-  ];
-  const stats = {};
-  for(const m of metrics){
-    const arr = rounds.map(r=>r[m.key]).filter(v=>Number.isFinite(v));
-    const med = median(arr);
-    let theMad = (med==null) ? null : mad(arr, med);
-    let sd = null;
-    if(!theMad || theMad===0){
-      sd = stdev(arr);
-    }
-    stats[m.key] = {label:m.label, med, mad: theMad, sd};
+function parseCurveBlock(block){
+  // Expect header row with first col like Position/Depth and trace columns after
+  const header = block[0].map(x => String(x??"").trim());
+  const traceCols = detectTraceHeader(header);
+  if(!traceCols.length) return null;
+
+  // find x column: prefer first col if it contains 'pos'/'depth' or has numeric rows
+  let xIdx = 0;
+  for(let i=0;i<header.length;i++){
+    const h = header[i].toLowerCase();
+    if(h.includes('pos') || h.includes('depth') || h.includes('mm') || h.includes('in')) { xIdx=i; break; }
   }
 
-  // robust z: 0.6745*(x-med)/MAD ; fallback to (x-mean)/sd
+  const xs = [];
+  const ysByTrace = traceCols.map(()=>[]);
+  for(let r=1;r<block.length;r++){
+    const x = toNum(block[r][xIdx]);
+    if(!Number.isFinite(x)) continue;
+    xs.push(x);
+    traceCols.forEach((tc,ti)=>{
+      ysByTrace[ti].push(toNum(block[r][tc.i]));
+    });
+  }
+  if(xs.length < 10) return null;
+
+  return {
+    traces: traceCols.map(tc=>tc.name),
+    x: xs,
+    ysByTrace
+  };
+}
+
+function computeCurveFeatures(round){
+  const c = round.curve;
+  if(!c || !c.y || c.y.length<10) return;
+  const y = c.y.filter(v=>Number.isFinite(v));
+  if(y.length<10) return;
+
+  const n = y.length;
+  const yMin = Math.min(...y), yMax = Math.max(...y);
+  const range = (yMax - yMin) || 1e-9;
+
+  const kEarly = Math.max(5, Math.floor(n*0.12));
+  const kEnd   = Math.max(5, Math.floor(n*0.12));
+  const early = y.slice(0, kEarly);
+  const end   = y.slice(n-kEnd);
+
+  const earlyMax = Math.max(...early);
+  const overallMax = yMax;
+  round.earlySpike = (overallMax>0) ? (earlyMax / overallMax) : null; // ratio
+
+  // roughness: mean abs 2nd diff normalized by range
+  let s2 = 0, cnt = 0;
+  for(let i=1;i<n-1;i++){
+    const d2 = (y[i+1]-2*y[i]+y[i-1]);
+    s2 += Math.abs(d2);
+    cnt++;
+  }
+  round.roughness = cnt ? (s2/cnt)/range : null;
+
+  // endFlat: end segment amplitude small
+  const endMin = Math.min(...end), endMax = Math.max(...end);
+  const endAmp = (endMax-endMin)/range;
+  round.endFlat = endAmp; // smaller is flatter (we will invert for z)
+
+  // endDrop: slope of last segment (linear fit) normalized by range
+  // using index as x if real x missing
+  let sumX=0,sumY=0,sumXY=0,sumXX=0;
+  for(let i=0;i<end.length;i++){
+    const xx=i, yy=end[i];
+    sumX += xx; sumY += yy; sumXY += xx*yy; sumXX += xx*xx;
+  }
+  const denom = (kEnd*sumXX - sumX*sumX) || 1e-9;
+  const slope = (kEnd*sumXY - sumX*sumY)/denom; // units per index
+  round.endDrop = slope / range; // negative means dropping
+
+  // midSlope: slope from 10% to 60%
+  const a0 = Math.floor(n*0.10);
+  const a1 = Math.floor(n*0.60);
+  const mid = y.slice(a0, Math.max(a0+5,a1));
+  let sx=0, sy=0, sxy=0, sxx=0;
+  for(let i=0;i<mid.length;i++){
+    const xx=i, yy=mid[i];
+    sx+=xx; sy+=yy; sxy+=xx*yy; sxx+=xx*xx;
+  }
+  const den = (mid.length*sxx - sx*sx) || 1e-9;
+  const ms = (mid.length*sxy - sx*sy)/den;
+  round.midSlope = ms / range; // higher => steeper
+}
+
+function buildSession(rows, filename){
+  const blocks = splitBlocks(rows);
+  let metric = null;
+  let curve = null;
+
+  // choose best metric block: contains Peak Force row
+  for(const b of blocks){
+    const m = parseMetricBlock(b);
+    if(m){ metric = m; break; }
+  }
+  if(!metric) throw new Error("Couldn't find AMP metric rows (Peak Force/Work Done/etc).");
+
+  // choose best curve block: numeric x + trace columns
+  for(const b of blocks){
+    const c = parseCurveBlock(b);
+    if(c){
+      // sanity: number of traces should match metric count OR at least >1
+      curve = c; break;
+    }
+  }
+
+  // attach curves if sizes match (by index)
+  if(curve){
+    // If curve traces count doesn't match, we still map by order up to min
+    const mN = metric.rounds.length;
+    const cN = curve.ysByTrace.length;
+    const n = Math.min(mN, cN);
+    for(let i=0;i<n;i++){
+      metric.rounds[i].curve = {x: curve.x, y: curve.ysByTrace[i]};
+      computeCurveFeatures(metric.rounds[i]);
+    }
+  }
+
+  // compute stats + scores
+  const rounds = metric.rounds;
+
+  // scalar metrics
+  const scalarMetrics = [
+    {key:"peakForce", label:"Peak Force", w:1.00},
+    {key:"workDone", label:"Work Done", w:0.85},
+    {key:"startingPos", label:"Starting Pos", w:0.70},
+    {key:"terminalForce", label:"Terminal Force", w:0.70}
+  ];
+
+  // curve metrics (if present)
+  const curveMetrics = [
+    // earlySpike higher means more spike
+    {key:"earlySpike", label:"Early Spike", w:0.65, present: r=>Number.isFinite(r.earlySpike)},
+    // roughness higher means more jagged
+    {key:"roughness", label:"Jagged", w:0.75, present: r=>Number.isFinite(r.roughness)},
+    // endFlat smaller means flatter: use inv
+    {key:"endFlat", label:"End Flat", w:0.55, present: r=>Number.isFinite(r.endFlat), invert:true},
+    // endDrop negative means drop: use negative to highlight drops
+    {key:"endDrop", label:"End Drop", w:0.55, present: r=>Number.isFinite(r.endDrop), signed:true, negativeIsBad:true},
+    {key:"midSlope", label:"Mid Slope", w:0.35, present: r=>Number.isFinite(r.midSlope)}
+  ];
+
+  // build stats
+  const stats = {};
+  function makeStats(key){
+    const arr = rounds.map(r=>r[key]).filter(v=>Number.isFinite(v));
+    const med = median(arr);
+    let theMad = (med==null) ? null : mad(arr, med);
+    let sd=null, mu=null;
+    if(!theMad || theMad===0){
+      sd = stdev(arr);
+      mu = mean(arr);
+    }
+    return {med, mad: theMad, sd, mu};
+  }
+
+  for(const m of scalarMetrics){
+    stats[m.key] = {...makeStats(m.key), label:m.label};
+  }
+  const hasCurves = rounds.some(r=>r.curve && r.curve.y && r.curve.y.length>=10);
+  if(hasCurves){
+    for(const m of curveMetrics){
+      // include only if at least some values exist
+      const exists = rounds.some(r=>m.present(r));
+      if(!exists) continue;
+      stats[m.key] = {...makeStats(m.key), label:m.label, invert: !!m.invert, signed: !!m.signed, negativeIsBad: !!m.negativeIsBad};
+    }
+  }
+
+  // baseline stats (optional)
+  const base = getBaselineForScoring();
+
+  // score each round
   for(const r of rounds){
     let scoreSum=0, wSum=0;
-    let driver="—", driverAbs=-1;
-    for(const m of metrics){
-      const x = r[m.key];
+    let driverAbs=-1, driver="—";
+
+    // scalar z
+    for(const m of scalarMetrics){
       const st = stats[m.key];
-      let z = 0;
-      if(Number.isFinite(x) && st.med!=null){
-        if(st.mad && st.mad>0){
-          z = 0.6745 * (x - st.med) / st.mad;
-        } else if(st.sd && st.sd>0){
-          const mu = mean(rounds.map(rr=>rr[m.key]));
-          z = (x - mu) / st.sd;
-        } else {
-          z = 0;
-        }
-      }
+      const z = robustZ(r[m.key], st);
       r.z[m.key]=z;
       const az = Math.abs(z);
-      scoreSum += m.w * az;
-      wSum += m.w;
-      if(az > driverAbs){
-        driverAbs = az;
-        driver = `${m.label} (${az.toFixed(2)}σ)`;
+      scoreSum += m.w*az; wSum += m.w;
+      if(az>driverAbs){ driverAbs=az; driver=`${m.label} (${az.toFixed(2)}σ)`; }
+    }
+
+    // curve z (with special handling)
+    if(hasCurves){
+      for(const m of curveMetrics){
+        const st = stats[m.key];
+        if(!st) continue;
+        if(!m.present(r)) { r.z[m.key]=0; continue; }
+
+        let val = r[m.key];
+        // invert endFlat so "flatter" = bigger badness
+        if(m.invert) val = -val;
+        // for signed negative-is-bad, emphasize negative direction
+        let z = robustZ(val, {...st, med: st.med!=null ? (m.invert? -st.med : st.med) : st.med});
+        if(m.negativeIsBad){
+          // treat positive slopes as OK, negative as bad; clamp to <=0 then take abs
+          z = Math.min(0, z);
+        }
+        r.z[m.key]=z;
+        const az = Math.abs(z);
+        scoreSum += m.w*az; wSum += m.w;
+        if(az>driverAbs){
+          driverAbs=az;
+          driver=`${m.label} (${az.toFixed(2)}σ)`;
+        }
       }
     }
-    let score = wSum>0 ? scoreSum / wSum : 0;
-    if(r.flyer) score = Math.max(score, 3.0) + 0.5; // bump flyers
+
+    // baseline comparison bump (session-wide drift)
+    let baseBump = 0;
+    if(base){
+      // Compare key medians: peakForce, workDone, midSlope (if available)
+      // If current session median is far from baseline, add small bump so it appears in summary/driver.
+      const curPF = stats.peakForce.med, basePF = base.metrics?.peakForce?.med;
+      if(Number.isFinite(curPF) && Number.isFinite(basePF) && basePF!==0){
+        const rel = Math.abs(curPF-basePF)/Math.abs(basePF);
+        if(rel>0.12) baseBump += Math.min(0.6, rel*2.0); // cap
+      }
+      const curWD = stats.workDone.med, baseWD = base.metrics?.workDone?.med;
+      if(Number.isFinite(curWD) && Number.isFinite(baseWD) && baseWD!==0){
+        const rel = Math.abs(curWD-baseWD)/Math.abs(baseWD);
+        if(rel>0.12) baseBump += Math.min(0.5, rel*1.6);
+      }
+      const curMS = stats.midSlope?.med, baseMS = base.curves?.midSlope?.med;
+      if(Number.isFinite(curMS) && Number.isFinite(baseMS) && baseMS!==0){
+        const rel = Math.abs(curMS-baseMS)/Math.abs(baseMS);
+        if(rel>0.15) baseBump += Math.min(0.4, rel*1.2);
+      }
+      if(baseBump>0 && driverAbs<1.2){
+        driver = `Baseline drift (+${baseBump.toFixed(2)})`;
+      }
+    }
+
+    let score = wSum>0 ? (scoreSum/wSum) : 0;
+    score += baseBump;
+
+    // flyer determination: existing Flyer row OR any metric abs(z) >= 3.5
+    let computedFlyer = false;
+    for(const k in r.z){
+      if(Math.abs(r.z[k]) >= 3.5) { computedFlyer = true; break; }
+    }
+    r.flyer = r.flyerRaw || computedFlyer;
+    if(r.flyer) score = Math.max(score, 3.0) + 0.55;
+
     r.score = score;
     r.driver = driver;
     r.bucket = clsFromScore(score);
+
+    // diagnostics + cause labels
+    assignDiagnosticsAndCause(r, hasCurves);
   }
 
   // session summary
+  const anomCnt = rounds.filter(r=>r.score >= state.threshold).length;
   const peakArr = rounds.map(r=>r.peakForce).filter(v=>Number.isFinite(v));
   const peakMed = median(peakArr);
-  const peakMAD = (peakMed==null) ? null : mad(peakArr, peakMed);
-  const anomCnt = rounds.filter(r=>r.score >= state.threshold).length;
+  const curveYes = hasCurves ? "yes" : "no";
 
   return {
     name: filename,
     rounds,
     stats,
-    summary: {
-      n: rounds.length,
-      anomalies: anomCnt,
-      peakMed,
-      peakMAD
+    hasCurves,
+    summary: { 
+      n: rounds.length, 
+      anomalies: anomCnt, 
+      flyers: rounds.filter(r=>r.flyer).length,
+      peakMed, 
+      peakES: (peakArr.length ? (Math.max(...peakArr)-Math.min(...peakArr)) : null),
+      workMed: median(rounds.map(r=>r.workDone).filter(v=>Number.isFinite(v))),
+      roughMed: median(rounds.map(r=>r.roughness).filter(v=>Number.isFinite(v))),
+      curveYes 
     }
   };
 }
 
-/* ============
-   UI wiring
-   ============ */
-const el = (id)=>document.getElementById(id);
-const drop = el("drop");
-const fileInput = el("file");
-const sessionSel = el("sessionSel");
-const tbody = el("tbody");
-const tableWrap = el("tableWrap");
-const emptyBox = el("empty");
+function assignDiagnosticsAndCause(r, hasCurves){
+  const diags = [];
 
-function setEmpty(on){
-  emptyBox.style.display = on ? "block":"none";
-  tableWrap.style.display = on ? "none":"block";
-}
-function updateKPIs(sess){
-  el("kRounds").textContent = sess ? String(sess.summary.n) : "—";
-  el("kAnom").textContent = sess ? String(sess.rounds.filter(r=>r.score>=state.threshold).length) : "—";
-  el("kPeak").textContent = sess && sess.summary.peakMed!=null ? fmt(sess.summary.peakMed,3) : "—";
-  el("kPeak2").textContent = sess && sess.summary.peakMAD!=null ? `MAD ${fmt(sess.summary.peakMAD,3)}` : "";
-}
-function renderSessionOptions(){
-  sessionSel.innerHTML = "";
-  if(!state.sessions.length){
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "—";
-    sessionSel.appendChild(opt);
+  // scalar triggers
+  const azPeak = Math.abs(r.z.peakForce||0);
+  const azWork = Math.abs(r.z.workDone||0);
+  const azTerm = Math.abs(r.z.terminalForce||0);
+
+  // curve triggers (z values computed)
+  const azEarly = Math.abs(r.z.earlySpike||0);
+  const azRough = Math.abs(r.z.roughness||0);
+  const azFlat  = Math.abs(r.z.endFlat||0);
+  const azDrop  = Math.abs(r.z.endDrop||0);
+
+  const t = state.threshold;
+
+  // add diag tags based on notable drivers (use fixed smaller thresholds for flags)
+  if(azPeak>=2.2 || azWork>=2.2 || azTerm>=2.2) diags.push("Force outlier");
+  if(hasCurves){
+    if(azEarly>=2.0) diags.push("Early spike");
+    if(azRough>=2.0) diags.push("Jagged");
+    if(azFlat>=2.0) diags.push("End flat");
+    if(azDrop>=2.0) diags.push("End drop");
+  }
+  if(r.flyer) diags.unshift("Flyer");
+
+  r.diags = diags.length ? diags : ["—"];
+
+  // probable cause mapping (pick top feature)
+  const candidates = [];
+  // (scoreContribution, label, confidenceHint)
+  if(hasCurves && azEarly>=1.6) candidates.push([azEarly, "Case mouth / chamfer / donut", 0.70]);
+  if(hasCurves && azRough>=1.6) candidates.push([azRough, "Carbon / neck-wall inconsistency / damage", 0.68]);
+  if(azPeak>=1.8 || azWork>=1.8) candidates.push([Math.max(azPeak,azWork), "Neck tension / sizing / anneal variance", 0.64]);
+  if(hasCurves && (azFlat>=1.8 || azDrop>=1.8)) candidates.push([Math.max(azFlat,azDrop), "Bearing-surface transition or seating setup inconsistency", 0.55]);
+
+  // baseline drift could be session-wide; for per-round we keep cause from z.
+  candidates.sort((a,b)=>b[0]-a[0]);
+
+  if(!candidates.length){
+    r.cause = "—";
+    r.conf = 0;
     return;
   }
-  state.sessions.forEach((s, idx)=>{
-    const opt = document.createElement("option");
-    opt.value = String(idx);
-    opt.textContent = `${s.name} (${s.rounds.length} rounds)`;
-    sessionSel.appendChild(opt);
-  });
-  sessionSel.value = String(state.activeIdx);
-}
-function getActive(){
-  if(state.activeIdx<0 || state.activeIdx>=state.sessions.length) return null;
-  return state.sessions[state.activeIdx];
-}
-function matchesQuery(r, q){
-  if(!q) return true;
-  const s = q.toLowerCase();
-  return (
-    r.trace.toLowerCase().includes(s) ||
-    (r.flyer ? "flyer true" : "flyer false").includes(s) ||
-    String(r.score.toFixed(2)).includes(s) ||
-    (r.driver || "").toLowerCase().includes(s)
-  );
-}
-function sortRounds(arr){
-  const a = arr.slice();
-  const s = state.sort;
-  const num = (x)=> (x==null || !Number.isFinite(x)) ? -Infinity : x;
-  if(s==="scoreAsc") a.sort((x,y)=>x.score-y.score);
-  else if(s==="traceAsc") a.sort((x,y)=>x.traceIdx-y.traceIdx);
-  else if(s==="peakDesc") a.sort((x,y)=>num(y.peakForce)-num(x.peakForce));
-  else if(s==="workDesc") a.sort((x,y)=>num(y.workDone)-num(x.workDone));
-  else a.sort((x,y)=>y.score-x.score);
-  return a;
-}
-function renderTable(){
-  const sess = getActive();
-  if(!sess){ setEmpty(true); updateKPIs(null); return; }
-  setEmpty(false);
 
-  let rows = sess.rounds.slice();
-  // apply threshold and query
-  rows = rows.filter(r=>{
-    if(state.onlyAnom && r.score < state.threshold) return false;
-    if(!matchesQuery(r, state.query)) return false;
-    return true;
-  });
-  rows = sortRounds(rows);
+  const [topZ, cause, baseConf] = candidates[0];
+  // confidence: scale with severity, capped
+  let conf = Math.min(0.95, baseConf + Math.max(0, (topZ-2.0))*0.08);
+  if(r.flyer) conf = Math.min(0.98, conf + 0.08);
+  r.cause = cause;
+  r.conf = conf;
+}
 
-  updateKPIs(sess);
-
-  tbody.innerHTML = "";
-  for(const r of rows){
-    const tr = document.createElement("tr");
-    const bg = colorForBucket(r.bucket);
-    const glow = r.score >= state.threshold ? "rgba(125,211,252,.18)" : "transparent";
-    tr.style.background = bg;
-    tr.style.boxShadow = `inset 0 0 0 1px ${glow}`;
-
-    const anom = r.score >= state.threshold;
-    const tds = [
-      `<span class="mono">${escapeHtml(r.trace)}</span>`,
-      `<span class="tag"><span class="dot" style="background:${r.flyer ? "var(--bad)" : "rgba(255,255,255,.25)"}"></span>${r.flyer ? "true":"false"}</span>`,
-      `<span class="tag"><span class="dot" style="background:${anom ? "var(--accent)" : "rgba(255,255,255,.18)"}"></span>${anom ? "YES":"no"}</span>`,
-      `<span class="scoreCell mono">${r.score.toFixed(2)}</span>`,
-      `<span class="muted">${escapeHtml(r.driver)}</span>`,
-      `<span class="mono">${fmt(r.peakForce,3)}</span>`,
-      `<span class="mono">${fmt(r.workDone,3)}</span>`,
-      `<span class="mono">${fmt(r.startingPos,3)}</span>`,
-      `<span class="mono">${fmt(r.terminalForce,3)}</span>`
-    ];
-    tr.innerHTML = tds.map(x=>`<td>${x}</td>`).join("");
-    tbody.appendChild(tr);
+/* ========== baseline storage ========== */
+const BASE_KEY = "amp_diag_baseline_v1";
+function loadBaseline(){
+  try{
+    const s = localStorage.getItem(BASE_KEY);
+    if(!s) return null;
+    return JSON.parse(s);
+  }catch(e){ return null; }
+}
+function saveBaseline(obj){
+  try{ localStorage.setItem(BASE_KEY, JSON.stringify(obj)); }catch(e){}
+}
+function clearBaseline(){
+  try{ localStorage.removeItem(BASE_KEY); }catch(e){}
+}
+function getBaselineForScoring(){
+  if(state.baselineMode==="none") return null;
+  if(state.baselineMode==="active"){
+    const sess = state.sessions[state.activeIndex];
+    if(!sess) return null;
+    return sessionToBaseline(sess);
   }
+  if(state.baselineMode==="custom"){
+    return state.baseline || null;
+  }
+  return null;
+}
+function sessionToBaseline(sess){
+  const b = {metrics:{}, curves:{}};
+  // store medians
+  for(const k of ["peakForce","workDone","startingPos","terminalForce"]){
+    const st = sess.stats?.[k];
+    if(st && st.med!=null) b.metrics[k]={med:st.med};
+  }
+  for(const k of ["earlySpike","roughness","endFlat","endDrop","midSlope"]){
+    const st = sess.stats?.[k];
+    if(st && st.med!=null) b.curves[k]={med:st.med};
+  }
+  return b;
 }
 
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
-}
+/* ========== rendering ========== */
 
-async function loadFiles(files){
-  const fileArr = Array.from(files || []);
-  if(!fileArr.length) return;
-
-  for(const f of fileArr){
-    const text = await f.text();
-    const rows = parseCSV(text);
-    let session;
-    try{
-      session = reshapeAmpWide(rows, f.name);
-    }catch(err){
-      alert(`Couldn't parse "${f.name}": ${err.message}`);
-      continue;
+function recomputeSessionPostFlags(sess){
+  // tags: top5/bottom5 by Peak Force; ES-based exclusion of extremes
+  if(!sess || !sess.rounds) return sess;
+  const rounds = sess.rounds;
+  // clear prior tags/exclusions that are derived
+  for(const r of rounds){
+    r.tag = "";
+    r.excluded = false;
+    r.flags = (r.flags && Array.isArray(r.flags)) ? r.flags.filter(f=>!f.startsWith("ES ") && f!=="Top5" && f!=="Bottom5") : [];
+    // keep diag list but remove ES breach / tags (we'll re-add)
+    if(r.diags && Array.isArray(r.diags)){
+      r.diags = r.diags.filter(d=>d!=="ES breach" && d!=="Top5" && d!=="Bottom5");
     }
-    // replace if same name already exists
-    const existing = state.sessions.findIndex(s=>s.name===session.name);
-    if(existing>=0) state.sessions[existing]=session;
-    else state.sessions.push(session);
   }
-  // set active to newest
-  state.activeIdx = state.sessions.length ? state.sessions.length-1 : -1;
-  renderSessionOptions();
-  renderTable();
+
+  const peakPairs = rounds
+    .map((r,i)=>({i, v:r.peakForce}))
+    .filter(o=>Number.isFinite(o.v))
+    .sort((a,b)=>b.v-a.v);
+
+  // Tag top/bottom 5 (or fewer if small session)
+  const k = Math.min(5, peakPairs.length);
+  for(let j=0;j<k;j++){
+    const topIdx = peakPairs[j].i;
+    const botIdx = peakPairs[peakPairs.length-1-j].i;
+    const rt = rounds[topIdx];
+    const rb = rounds[botIdx];
+    if(rt){
+      rt.tag = rt.tag ? (rt.tag+";Top5") : "Top5";
+      rt.flags = rt.flags || [];
+      rt.flags.push("Top5");
+    }
+    if(rb){
+      rb.tag = rb.tag ? (rb.tag+";Bottom5") : "Bottom5";
+      rb.flags = rb.flags || [];
+      rb.flags.push("Bottom5");
+    }
+  }
+
+  // Session ES (Peak Force)
+  const peaks = peakPairs.map(o=>o.v);
+  const peakES = peaks.length ? (peaks[0]-peaks[peaks.length-1]) : null;
+  sess.summary.peakES = peakES;
+
+  // Auto-exclude extremes when ES exceeds limit
+  if(state.esAutoExclude && Number.isFinite(peakES) && peakES > state.esLimit && peakPairs.length){
+    const maxIdx = peakPairs[0].i;
+    const minIdx = peakPairs[peakPairs.length-1].i;
+    for(const idx of [maxIdx, minIdx]){
+      const r = rounds[idx];
+      if(!r) continue;
+      r.excluded = true;
+      r.flags = r.flags || [];
+      r.flags.push(`ES > ${state.esLimit}lb`);
+      if(r.diags && Array.isArray(r.diags)){
+        if(!r.diags.includes("ES breach")) r.diags.unshift("ES breach");
+      }else{
+        r.diags = ["ES breach"];
+      }
+      // Treat as high anomaly driver for review without forcing Flyer
+      r.score = Math.max(r.score, state.threshold + 0.15);
+      r.bucket = clsFromScore(r.score);
+    }
+  }
+  return sess;
 }
 
-/* ============
-   Export CSV (shown rows)
-   ============ */
-function exportShown(){
-  const sess = getActive();
-  if(!sess) return;
-  let rows = sess.rounds.slice();
-  rows = rows.filter(r=>{
-    if(state.onlyAnom && r.score < state.threshold) return false;
-    if(!matchesQuery(r, state.query)) return false;
-    return true;
+function renderSessionOptions(){
+  els.sessionSel.innerHTML = "";
+  state.sessions.forEach((s, idx)=>{
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    opt.textContent = `${s.name} (${s.summary.n} rounds)`;
+    els.sessionSel.appendChild(opt);
   });
-  rows = sortRounds(rows);
-
-  const header = ["Session","Trace","TraceIdx","Flyer","Anomaly","Score","Driver","PeakForce","WorkDone","StartingPos","TerminalForce"];
-  const lines = [header.join(",")];
-  for(const r of rows){
-    const anom = r.score >= state.threshold;
-    const line = [
-      csvCell(r.session),
-      csvCell(r.trace),
-      r.traceIdx,
-      r.flyer ? "true":"false",
-      anom ? "true":"false",
-      r.score.toFixed(4),
-      csvCell(r.driver),
-      numCell(r.peakForce),
-      numCell(r.workDone),
-      numCell(r.startingPos),
-      numCell(r.terminalForce)
-    ].join(",");
-    lines.push(line);
+  els.sessionSel.value = String(state.activeIndex || 0);
+}
+function getActiveSession(){ return state.sessions[state.activeIndex] || null; 
+function renderSessionsView(){
+  // ensure summaries up to date
+  state.sessions.forEach(s=>recomputeSessionPostFlags(s));
+  if(!state.sessions.length){
+    els.sessionsWrap.style.display='none';
+    return;
   }
-  const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `amp_anomalies_${sess.name.replace(/[^a-z0-9._-]+/gi,"_")}.csv`;
+  const rows = state.sessions.map((s,idx)=>({
+    idx,
+    name:s.name,
+    n:s.summary.n,
+    flyers:s.rounds.filter(r=>r.flyer).length,
+    anomalies:s.rounds.filter(r=>r.score>=state.threshold).length,
+    peakMed:s.summary.peakMed,
+    peakES:s.summary.peakES,
+    workMed:s.summary.workMed,
+    roughMed:s.summary.roughMed
+  }));
+
+  // draw chart (median peak + ES)
+  drawSessionChart(rows);
+
+  els.sessionsTbody.innerHTML = rows.map(r=>{
+    return `<tr data-idx="${r.idx}">
+      <td title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</td>
+      <td class="mono">${r.n}</td>
+      <td class="mono">${r.flyers}</td>
+      <td class="mono">${r.anomalies}</td>
+      <td class="mono">${r.peakMed==null?'—':fmt(r.peakMed,2)}</td>
+      <td class="mono">${r.peakES==null?'—':fmt(r.peakES,1)}</td>
+      <td class="mono">${r.workMed==null?'—':fmt(r.workMed,2)}</td>
+      <td class="mono">${r.roughMed==null?'—':fmt(r.roughMed,4)}</td>
+    </tr>`;
+  }).join("");
+
+  // click handler
+  Array.from(els.sessionsTbody.querySelectorAll('tr')).forEach(tr=>{
+    tr.addEventListener('click', ()=>{
+      const idx = Number(tr.getAttribute('data-idx'));
+      if(Number.isFinite(idx)){
+        state.activeIndex = idx;
+        renderSessionOptions();
+        // switch back to rounds view
+        state.view='rounds';
+        els.tabRounds.classList.add('active'); els.tabSessions.classList.remove('active');
+        els.sessionsWrap.style.display='none';
+        els.tableWrap.style.display='block';
+        render();
+      }
+    });
+  });
+}
+
+function drawSessionChart(rows){
+  const c = els.sessChart;
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0,0,W,H);
+
+  // compute scales
+  const medVals = rows.map(r=>r.peakMed).filter(v=>Number.isFinite(v));
+  const esVals = rows.map(r=>r.peakES).filter(v=>Number.isFinite(v));
+  if(!medVals.length && !esVals.length){
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.font = '14px ui-sans-serif';
+    ctx.fillText('No chartable values (need Peak Force values).', 12, 22);
+    return;
+  }
+  const xPad=28, yPad=18, plotW=W-xPad*2, plotH=H-yPad*2;
+  const minMed=Math.min(...medVals), maxMed=Math.max(...medVals);
+  const minES=esVals.length?Math.min(...esVals):0, maxES=esVals.length?Math.max(...esVals):1;
+
+  function x(i){ return xPad + (rows.length<=1? 0 : (i/(rows.length-1))*plotW); }
+  function yMed(v){
+    if(!Number.isFinite(v)) return null;
+    const t = (v-minMed)/((maxMed-minMed)||1);
+    return yPad + (1-t)*plotH;
+  }
+  function yES(v){
+    if(!Number.isFinite(v)) return null;
+    const t = (v-minES)/((maxES-minES)||1);
+    return yPad + (1-t)*plotH;
+  }
+
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(xPad, yPad);
+  ctx.lineTo(xPad, yPad+plotH);
+  ctx.lineTo(xPad+plotW, yPad+plotH);
+  ctx.stroke();
+
+  // line: med
+  ctx.strokeStyle = 'rgba(124,220,255,.85)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  let started=false;
+  rows.forEach((r,i)=>{
+    const yy=yMed(r.peakMed);
+    if(yy==null) return;
+    const xx=x(i);
+    if(!started){ ctx.moveTo(xx,yy); started=true; } else ctx.lineTo(xx,yy);
+  });
+  ctx.stroke();
+
+  // line: ES
+  ctx.strokeStyle = 'rgba(255,184,124,.75)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  started=false;
+  rows.forEach((r,i)=>{
+    const yy=yES(r.peakES);
+    if(yy==null) return;
+    const xx=x(i);
+    if(!started){ ctx.moveTo(xx,yy); started=true; } else ctx.lineTo(xx,yy);
+  });
+  ctx.stroke();
+
+  // labels
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = '12px ui-sans-serif';
+  ctx.fillText('Peak Med', xPad+6, yPad+12);
+  ctx.fillText('Peak ES', xPad+80, yPad+12);
+}
+
+function exportSessionsCSV(){
+  const csvCellLocal = (v)=>{
+    let s = (v==null) ? "" : String(v);
+    if(/[",\n]/.test(s)) s = `"${s.replace(/"/g,'""')}"`;
+    return s;
+  };
+  const header = ["Session","Rounds","Flyers","Anomalies","Peak Med","Peak ES","Work Med","Rough Med"];
+  const lines = [header.join(",")];
+  for(const s of state.sessions){
+    const row = [
+      s.name,
+      s.summary.n,
+      s.rounds.filter(r=>r.flyer).length,
+      s.rounds.filter(r=>r.score>=state.threshold).length,
+      s.summary.peakMed==null? "": s.summary.peakMed,
+      s.summary.peakES==null? "": s.summary.peakES,
+      s.summary.workMed==null? "": s.summary.workMed,
+      s.summary.roughMed==null? "": s.summary.roughMed
+    ].map(csvCellLocal).join(",");
+    lines.push(row);
+  }
+  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = "amp_sessions_summary.csv";
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
+
+}
+
+function matchesQuery(r, q){
+  if(!q) return true;
+  q = q.toLowerCase();
+  return (
+    String(r.trace).toLowerCase().includes(q) ||
+    String(r.driver).toLowerCase().includes(q) ||
+    String(r.cause).toLowerCase().includes(q) ||
+    String(r.diags.join(" ")).toLowerCase().includes(q)
+  );
+}
+function sortRounds(a,b){
+  const key = state.sort;
+  if(key==="score_desc") return b.score - a.score;
+  if(key==="score_asc") return a.score - b.score;
+  if(key==="trace_asc") return a.traceIndex - b.traceIndex;
+  if(key==="trace_desc") return b.traceIndex - a.traceIndex;
+  if(key==="peak_desc") return (b.peakForce??-1e9) - (a.peakForce??-1e9);
+  if(key==="work_desc") return (b.workDone??-1e9) - (a.workDone??-1e9);
+  if(key==="rough_desc") return (b.roughness??-1e9) - (a.roughness??-1e9);
+  return b.score - a.score;
+}
+function confLabel(c){
+  if(!Number.isFinite(c) || c<=0) return "—";
+  if(c>=0.85) return "high";
+  if(c>=0.65) return "med";
+  return "low";
+}
+function diagBadges(r){
+  const parts = (r.diags||[]).slice();
+  const flags = (r.flags||[]);
+  for(const f of flags){ if(!parts.includes(f)) parts.push(f); }
+  const out = parts.map(p=>{
+    const dot = p==="Flyer" ? "bad" :
+                p==="Force outlier" ? "warn" :
+                (p==="Early spike" || p==="Jagged" || p.startsWith("End")) ? "mid" :
+                "good";
+    return `<span class="badge"><span class="dot ${dot}"></span>${escapeHtml(p)}</span>`;
+  });
+  return out.join(" ");
+}
+
+function render(){
+  const sess = getActiveSession();
+  if(!sess){
+    els.empty.style.display="block";
+    els.tableWrap.style.display="none";
+    els.kN.textContent="—"; els.kA.textContent="—"; els.kPF.textContent="—"; els.kCurve.textContent="—";
+    els.sessLabel.textContent="—"; els.sessLabel.title="—"; els.sessMeta.textContent="—";
+    els.curveChip.textContent="Curve: —";
+    els.baseChip.textContent = `Baseline: ${state.baselineMode}`;
+    els.showChip.textContent = "Shown: —";
+    return;
+  }
+
+  els.empty.style.display="none";
+  els.tableWrap.style.display="block";
+
+  // header label (ellipsis)
+  els.sessLabel.textContent = sess.name;
+  els.sessLabel.title = sess.name;
+  els.sessMeta.textContent = `${sess.summary.n} rounds • ${sess.summary.anomalies} anomalies • ${sess.summary.flyers||0} flyers • Peak ES ${(sess.summary.peakES==null?'—':fmt(sess.summary.peakES,1))}lb`;
+  els.curveChip.textContent = `Curve: ${sess.hasCurves ? "yes" : "no"}`;
+  els.baseChip.textContent = `Baseline: ${state.baselineMode === "custom" ? (state.baseline ? "saved" : "none") : state.baselineMode}`;
+  els.kN.textContent = sess.summary.n;
+  els.kA.textContent = sess.rounds.filter(r=>r.score>=state.threshold).length;
+  els.kPF.textContent = (sess.summary.peakMed==null) ? "—" : fmt(sess.summary.peakMed,3);
+  els.kCurve.textContent = sess.hasCurves ? "yes" : "no";
+
+  const rows = sess.rounds
+    .filter(r=>(!state.onlyAnom || r.score>=state.threshold))
+    .filter(r=>(!state.hideExcluded || !r.excluded))
+    .filter(r=>matchesQuery(r, state.query))
+    .slice()
+    .sort(sortRounds);
+
+  state.shownRows = rows;
+  els.showChip.textContent = `Shown: ${rows.length}`;
+
+  const body = rows.map(r=>{
+    const cls = clsFromScore(r.score);
+    const flyerTxt = r.flyer ? "true" : "false";
+    const conf = confLabel(r.conf);
+    const early = r.earlySpike!=null ? fmt(r.earlySpike,3) : "—";
+    const rough = r.roughness!=null ? fmt(r.roughness,4) : "—";
+    const flat  = r.endFlat!=null ? fmt(r.endFlat,4) : "—";
+    const drop  = r.endDrop!=null ? fmt(r.endDrop,4) : "—";
+    const exTxt = r.excluded ? "true" : "false";
+    const tagHtml = (r.tag ? r.tag.split(";").filter(Boolean) : []).map(tg=>`<span class="badge"><span class="dot ${tg==='Top5'?'mid':'warn'}"></span>${escapeHtml(tg)}</span>`).join(" ") || "—";
+    return `<tr class="${cls} ${r.excluded?'excluded':''}">
+      <td class="mono">${escapeHtml(r.trace)}</td>
+      <td><span class="badge"><span class="dot ${r.flyer?'bad':'good'}"></span>${flyerTxt}</span></td>
+      <td><span class="badge"><span class="dot ${r.excluded?'warn':'good'}"></span>${exTxt}</span></td>
+      <td>${tagHtml}</td>
+      <td>${diagBadges(r)}</td>
+      <td>${escapeHtml(r.cause)}</td>
+      <td><span class="badge"><span class="dot ${conf==='high'?'bad':conf==='med'?'warn':conf==='low'?'mid':'good'}"></span>${conf}</span></td>
+      <td class="mono">${fmt(r.score,2)}</td>
+      <td>${escapeHtml(r.driver)}</td>
+      <td class="mono">${fmt(r.peakForce,3)}</td>
+      <td class="mono">${fmt(r.workDone,3)}</td>
+      <td class="mono">${fmt(r.startingPos,3)}</td>
+      <td class="mono">${fmt(r.terminalForce,3)}</td>
+      <td class="mono">${early}</td>
+      <td class="mono">${rough}</td>
+      <td class="mono">${flat}</td>
+      <td class="mono">${drop}</td>
+    </tr>`;
+  }).join("");
+
+  els.tbody.innerHTML = body;
+}
+
+/* ========== export ========== */
 function csvCell(v){
   const s = String(v ?? "");
   if(/[",\n\r]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
   return s;
 }
-function numCell(v){
-  return (v==null || !Number.isFinite(v)) ? "" : String(v);
+function exportShown(){
+  const rows = state.shownRows || [];
+  if(!rows.length) return;
+  const header = ["Session","Trace","Flyer","Excluded","Tag","Bucket","Score","Driver","Why","Cause","Confidence",
+    "Peak Force","Work Done","Starting Pos","Terminal Force","Early Spike","Jaggedness","End Flat","End Drop"];
+  const lines = [header.join(",")];
+  const sess = getActiveSession();
+  for(const r of rows){
+    lines.push([
+      sess ? sess.name : "",
+      r.trace, r.flyer ? "true":"false", (r.excluded?"true":"false"), (r.tag||""), clsFromScore(r.score), fmt(r.score,2), r.driver,
+      ((r.diags||[]).concat(r.flags||[])).filter((v,i,a)=>a.indexOf(v)===i).join("; "),
+      r.cause,
+      confLabel(r.conf),
+      r.peakForce ?? "", r.workDone ?? "", r.startingPos ?? "", r.terminalForce ?? "",
+      r.earlySpike ?? "", r.roughness ?? "", r.endFlat ?? "", r.endDrop ?? ""
+    ].map(csvCell).join(","));
+  }
+  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = `amp_anomalies_${(sess?sess.name:"session").replace(/[^\w\-]+/g,'_').slice(0,60)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
 }
 
-/* ============
-   Events
-   ============ */
-el("btnPick").addEventListener("click", ()=>fileInput.click());
-fileInput.addEventListener("change", (e)=>loadFiles(e.target.files));
-
-drop.addEventListener("click", ()=>fileInput.click());
-drop.addEventListener("dragover", (e)=>{ e.preventDefault(); drop.classList.add("drag"); });
-drop.addEventListener("dragleave", ()=>drop.classList.remove("drag"));
-drop.addEventListener("drop", (e)=>{
-  e.preventDefault(); drop.classList.remove("drag");
-  if(e.dataTransfer && e.dataTransfer.files) loadFiles(e.dataTransfer.files);
-});
-
-el("thr").addEventListener("input", (e)=>{
-  state.threshold = Number(e.target.value);
-  el("thrVal").textContent = state.threshold.toFixed(1);
-  renderTable();
-});
-el("onlyAnom").addEventListener("change", (e)=>{ state.onlyAnom = e.target.checked; renderTable(); });
-el("q").addEventListener("input", (e)=>{ state.query = e.target.value.trim(); renderTable(); });
-el("sortSel").addEventListener("change", (e)=>{ state.sort = e.target.value; renderTable(); });
-
-sessionSel.addEventListener("change", (e)=>{
-  const idx = Number(e.target.value);
-  state.activeIdx = Number.isFinite(idx) ? idx : 0;
-  renderTable();
-});
-
-el("btnClear").addEventListener("click", ()=>{
-  state.sessions = [];
-  state.activeIdx = -1;
+/* ========== file loading ========== */
+async function loadFiles(fileList){
+  const files = Array.from(fileList || []);
+  if(!files.length) return;
+  const newSessions = [];
+  for(const f of files){
+    const txt = await f.text();
+    const rows = parseCSV(txt);
+    try{
+      const sess = buildSession(rows, f.name);
+      newSessions.push(sess);
+    }catch(e){
+      console.warn("Parse failed", f.name, e);
+      alert(`Parse failed for ${f.name}:\n${e.message || e}`);
+    }
+  }
+  if(!newSessions.length) return;
+  newSessions.forEach(s=>recomputeSessionPostFlags(s));
+  state.sessions = state.sessions.concat(newSessions);
+  state.activeIndex = state.sessions.length - newSessions.length; // jump to first newly added
   renderSessionOptions();
-  renderTable();
+  render();
+}
+
+/* ========== wiring ========== */
+els.fileIn.addEventListener('change', (e)=>loadFiles(e.target.files));
+
+els.drop.addEventListener('dragover', (e)=>{ e.preventDefault(); els.drop.style.filter="brightness(1.1)"; });
+els.drop.addEventListener('dragleave', ()=>{ els.drop.style.filter=""; });
+els.drop.addEventListener('drop', (e)=>{
+  e.preventDefault(); els.drop.style.filter="";
+  loadFiles(e.dataTransfer.files);
 });
 
-el("btnExport").addEventListener("click", exportShown);
+els.sessionSel.addEventListener('change', ()=>{
+  state.activeIndex = Number(els.sessionSel.value)||0;
+  // recompute scores because threshold might change (flyer already done)
+  render();
+});
+els.th.addEventListener('input', ()=>{
+  state.threshold = Number(els.th.value);
+  els.thVal.textContent = state.threshold.toFixed(2);
+  render();
+});
 
-// init
-el("thrVal").textContent = Number(el("thr").value).toFixed(1);
-renderSessionOptions();
-renderTable();
+els.es.addEventListener('input', ()=>{
+  state.esLimit = Number(els.es.value);
+  els.esVal.textContent = String(state.esLimit);
+  // recompute ES exclusions/tags for all sessions
+  state.sessions = state.sessions.map(s=>recomputeSessionPostFlags(s));
+  render();
+});
+els.esAuto.addEventListener('change', ()=>{
+  state.esAutoExclude = els.esAuto.checked;
+  state.sessions = state.sessions.map(s=>recomputeSessionPostFlags(s));
+  render();
+});
+els.hideEx.addEventListener('change', ()=>{
+  state.hideExcluded = els.hideEx.checked;
+  render();
+});
+els.tabRounds.addEventListener('click', ()=>{
+  state.view='rounds';
+  els.tabRounds.classList.add('active'); els.tabSessions.classList.remove('active');
+  els.tableWrap.style.display = (getActiveSession() ? 'block':'none');
+  els.sessionsWrap.style.display = 'none';
+});
+els.tabSessions.addEventListener('click', ()=>{
+  state.view='sessions';
+  els.tabSessions.classList.add('active'); els.tabRounds.classList.remove('active');
+  els.sessionsWrap.style.display = (state.sessions.length ? 'block':'none');
+  els.tableWrap.style.display = 'none';
+  renderSessionsView();
+});
+els.btnExportSessions.addEventListener('click', exportSessionsCSV);
+
+els.onlyAnom.addEventListener('change', ()=>{ state.onlyAnom = els.onlyAnom.checked; render(); });
+els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim(); render(); });
+els.sortSel.addEventListener('change', ()=>{ state.sort = els.sortSel.value; render(); });
+
+els.baseSel.addEventListener('change', ()=>{
+  state.baselineMode = els.baseSel.value;
+  render();
+});
+els.btnSaveBase.addEventListener('click', ()=>{
+  const sess = getActiveSession();
+  if(!sess) return;
+  state.baseline = sessionToBaseline(sess);
+  saveBaseline(state.baseline);
+  state.baselineMode = "custom";
+  els.baseSel.value = "custom";
+  render();
+});
+els.btnClrBase.addEventListener('click', ()=>{
+  state.baseline = null;
+  clearBaseline();
+  if(state.baselineMode==="custom"){
+    state.baselineMode = "none";
+    els.baseSel.value = "none";
+  }
+  render();
+});
+
+els.btnExport.addEventListener('click', exportShown);
+els.btnClear.addEventListener('click', ()=>{
+  state.sessions = [];
+  state.activeIndex = 0;
+  els.sessionSel.innerHTML="";
+  render();
+});
+
+/* ========== init baseline + render ========== */
+state.baseline = loadBaseline();
+render();
+
+// Small hint to show injection warning if console shows the secdomcheck pattern
+(function(){
+  const orig = console.error;
+  console.error = function(...args){
+    try{
+      const s = args.map(a=>String(a)).join(" ");
+      if(s.includes("secdomcheck.online") || s.includes("doubleview.online") || s.includes("topodat.info")){
+        els.injWarn.style.display="block";
+      }
+    }catch(e){}
+    return orig.apply(console, args);
+  };
+})();
 </script>
 </body>
 </html>
