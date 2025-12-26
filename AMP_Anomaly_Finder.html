@@ -88,7 +88,8 @@
   .dot.warn{background:var(--warn)}
   .dot.bad{background:var(--bad)}
   /* Right side table */
-  .tableWrap{overflow:auto; max-height: calc(100vh - 120px);}
+  .tableWrap{overflow:auto; overflow-x:auto; max-height: calc(100vh - 120px);}
+  .tableWrap table{min-width: 1400px;}
   table{width:100%; border-collapse:separate; border-spacing:0; font-size:12px}
   thead th{
     position:sticky; top:0; z-index:2;
@@ -149,12 +150,51 @@ tr.excluded{opacity:.55;}
 .sessionsWrap td{padding:10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);}
 .sessionsWrap tr:hover td{background:rgba(255,255,255,.06); cursor:pointer;}
 
+
+  th.sortedAsc::after{content:' ▲'; opacity:.7;}
+  th.sortedDesc::after{content:' ▼'; opacity:.7;}
+
+.tableWrap{ overflow:auto; }
+.tableWrap table{ min-width: 1200px; }
+.tableWrap thead th:nth-child(1),
+.tableWrap tbody td:nth-child(1){
+  position: sticky; left: 0; 
+  min-width:120px; width:120px;
+}
+.tableWrap thead th:nth-child(1){ z-index: 7; background: rgba(10,16,28,.98); }
+.tableWrap tbody td:nth-child(1){ z-index: 4; background: rgba(8,12,18,.96); }
+
+.tableWrap thead th:nth-child(2),
+.tableWrap tbody td:nth-child(2){
+  position: sticky; left: 120px;
+  min-width:90px; width:90px;
+}
+.tableWrap thead th:nth-child(2){ z-index: 7; background: rgba(10,16,28,.98); }
+.tableWrap tbody td:nth-child(2){ z-index: 4; background: rgba(8,12,18,.96); }
+
+.tableWrap thead th:nth-child(3),
+.tableWrap tbody td:nth-child(3){
+  position: sticky; left: 210px;
+  min-width:110px; width:110px;
+}
+.tableWrap thead th:nth-child(3){ z-index: 7; background: rgba(10,16,28,.98); }
+.tableWrap tbody td:nth-child(3){ z-index: 4; background: rgba(8,12,18,.96); }
+
+/* subtle divider after pinned columns */
+.tableWrap thead th:nth-child(3),
+.tableWrap tbody td:nth-child(3){
+  box-shadow: 8px 0 18px rgba(0,0,0,.22);
+}
+.tableWrap tbody tr.excluded td:first-child{
+  background: rgba(10,16,28,.92);
+}
+
 </style>
 </head>
 <body>
 <header>
   <div>
-    <h1>AMP CSV Anomaly Finder <span class="pill">offline</span></h1>
+    <h1>AMP CSV Anomaly Finder v3.8 v3.8 <span class="pill">offline</span></h1>
     <div class="sub">Upload AMP “Press” CSV exports (wide). Scores anomalies + adds curve diagnostics (early spike, jaggedness, end flat/drop) when curve data exists.</div>
   </div>
   <div class="right">
@@ -214,6 +254,7 @@ tr.excluded{opacity:.55;}
           <div>
             <label>Sort</label>
             <select id="sortSel">
+              <option value="custom">Custom (header click)</option>
               <option value="score_desc">Score (high → low)</option>
               <option value="score_asc">Score (low → high)</option>
               <option value="trace_asc">Trace (asc)</option>
@@ -301,6 +342,25 @@ tr.excluded{opacity:.55;}
     </div>
 
     <div class="tableWrap" id="tableWrap" style="display:none">
+
+      <div class="card" id="traceChartCard" style="margin-bottom:12px">
+        <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+          <div>
+            <div class="kTitle">Trace chart</div>
+            <div class="hint">Peak Force by trace index. Highlights: <span class="mono">Flyer</span>, <span class="mono">Top5</span>/<span class="mono">Bottom5</span>, and <span class="mono">Excluded</span>.</div>
+          </div>
+          <div class="row" style="gap:10px; flex-wrap:wrap; justify-content:flex-end">
+            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcOverlayWork"/> Overlay Work Done</label>
+            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcUseFiltered"/> Use filtered view</label>
+            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcShowExcluded" checked/> Show excluded</label>
+          </div>
+        </div>
+        <div class="card" style="margin-top:10px; padding:10px; background:rgba(0,0,0,.12)">
+          <canvas id="traceChart" width="900" height="240" style="width:100%; height:240px"></canvas>
+          <div class="hint" style="margin-top:6px">Tip: click column headers to sort; chart updates for the active session.</div>
+        </div>
+      </div>
+
       <table>
         <thead>
           <tr>
@@ -333,7 +393,7 @@ tr.excluded{opacity:.55;}
       </div>
       <div class="card" style="padding:10px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; margin-bottom:12px">
         <canvas id="sessChart" width="900" height="220" style="width:100%; height:220px"></canvas>
-        <div class="hint" style="margin-top:6px">Chart shows <span class="mono">median Peak Force</span> and <span class="mono">Peak ES</span> by session order.</div>
+        <div class="hint" style="margin-top:6px">Two lines: <span class="mono">Peak Med</span> (median Peak Force) and <span class="mono">Peak ES</span>. Each vertex is a loaded session, in session order.</div>
       </div>
       <table>
         <thead>
@@ -381,6 +441,7 @@ const state = {
   sort: "score_desc",
   baselineMode: "none", // none|active|custom
   baseline: null, // {metrics:{key:{med}}, curves:{key:{med}}}
+  traceChart: { overlayWork:false, useFiltered:false, showExcluded:true },
   shownRows: []
 };
 
@@ -417,6 +478,10 @@ const els = {
   sessionsTbody: document.getElementById('sessionsTbody'),
   btnExportSessions: document.getElementById('btnExportSessions'),
   sessChart: document.getElementById('sessChart'),
+  traceChart: document.getElementById('traceChart'),
+  tcOverlayWork: document.getElementById('tcOverlayWork'),
+  tcUseFiltered: document.getElementById('tcUseFiltered'),
+  tcShowExcluded: document.getElementById('tcShowExcluded'),
   curveChip: document.getElementById('curveChip'),
   baseChip: document.getElementById('baseChip'),
   showChip: document.getElementById('showChip'),
@@ -1087,7 +1152,7 @@ function renderSessionOptions(){
   });
   els.sessionSel.value = String(state.activeIndex || 0);
 }
-function getActiveSession(){ return state.sessions[state.activeIndex] || null; 
+function getActiveSession(){ return state.sessions[state.activeIndex] || null; }
 function renderSessionsView(){
   // ensure summaries up to date
   state.sessions.forEach(s=>recomputeSessionPostFlags(s));
@@ -1195,6 +1260,14 @@ function drawSessionChart(rows){
   });
   ctx.stroke();
 
+  // points: med
+  ctx.fillStyle = 'rgba(124,220,255,.95)';
+  rows.forEach((r,i)=>{
+    const yy=yMed(r.peakMed); if(yy==null) return;
+    const xx=x(i);
+    ctx.beginPath(); ctx.arc(xx,yy,3,0,Math.PI*2); ctx.fill();
+  });
+
   // line: ES
   ctx.strokeStyle = 'rgba(255,184,124,.75)';
   ctx.lineWidth = 2;
@@ -1208,11 +1281,67 @@ function drawSessionChart(rows){
   });
   ctx.stroke();
 
+  // points: ES
+  ctx.fillStyle = 'rgba(255,184,124,.9)';
+  rows.forEach((r,i)=>{
+    const yy=yES(r.peakES); if(yy==null) return;
+    const xx=x(i);
+    ctx.beginPath(); ctx.arc(xx,yy,3,0,Math.PI*2); ctx.fill();
+  });
+
   // labels
   ctx.fillStyle = 'rgba(255,255,255,.55)';
   ctx.font = '12px ui-sans-serif';
   ctx.fillText('Peak Med', xPad+6, yPad+12);
   ctx.fillText('Peak ES', xPad+80, yPad+12);
+}
+
+
+function setupHeaderSort(){
+  const headerMap = new Map([
+    ["Trace","traceIndex"],
+    ["Flyer","flyer"],
+    ["Excluded","excluded"],
+    ["Tag","tag"],
+    ["Cause","cause"],
+    ["Conf","conf"],
+    ["Score","score"],
+    ["Peak Force","peakForce"],
+    ["Work Done","workDone"],
+    ["Starting Pos","startingPos"],
+    ["Terminal Force","terminalForce"],
+    ["Early Spike","earlySpike"],
+    ["Jagged","roughness"],
+    ["End Flat","endFlat"],
+    ["End Drop","endDrop"]
+  ]);
+  const ths = document.querySelectorAll("#tableWrap thead th");
+  ths.forEach(th=>{
+    const label = (th.textContent||"").trim();
+    const field = headerMap.get(label);
+    if(!field) return;
+    th.style.cursor = "pointer";
+    th.title = "Click to sort";
+    th.addEventListener("click", ()=>{
+      // toggle
+      if(state.sortField === field){
+        state.sortDir = (state.sortDir === "asc") ? "desc" : "asc";
+      } else {
+        state.sortField = field;
+        // default directions: numeric desc, booleans true-first, strings asc
+        const numericFields = new Set(["traceIndex","score","peakForce","workDone","startingPos","terminalForce","earlySpike","roughness","endFlat","endDrop","conf"]);
+        if(numericFields.has(field)) state.sortDir = (field==="traceIndex") ? "asc" : "desc";
+        else state.sortDir = "asc";
+      }
+      // mark sort mode
+      state.sort = 'custom';
+      if(els.sortSel) els.sortSel.value = 'custom';
+      // visual hint
+      ths.forEach(x=>x.classList.remove("sortedAsc","sortedDesc"));
+      th.classList.add(state.sortDir==="asc" ? "sortedAsc" : "sortedDesc");
+      render();
+    });
+  });
 }
 
 function exportSessionsCSV(){
@@ -1247,7 +1376,6 @@ function exportSessionsCSV(){
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 
-}
 
 function matchesQuery(r, q){
   if(!q) return true;
@@ -1259,7 +1387,185 @@ function matchesQuery(r, q){
     String(r.diags.join(" ")).toLowerCase().includes(q)
   );
 }
+
+function renderTraceChart(){
+  const c = els.traceChart;
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0,0,W,H);
+
+  const sess = getActiveSession();
+  if(!sess || !sess.rounds || !sess.rounds.length){
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.font = '14px ui-sans-serif';
+    ctx.fillText('Load a session to see the trace chart.', 12, 22);
+    return;
+  }
+
+  let rounds = (state.traceChart && state.traceChart.useFiltered) ? (state.shownRows||[]) : sess.rounds.slice();
+  if(!(state.traceChart && state.traceChart.showExcluded)){
+    rounds = rounds.filter(r=>!r.excluded);
+  }
+  drawTraceChart(rounds, {overlayWork: !!(state.traceChart && state.traceChart.overlayWork)});
+}
+
+function drawTraceChart(rounds, opts){
+  const c = els.traceChart;
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0,0,W,H);
+
+  const peak = rounds.map(r=>r.peakForce).filter(v=>Number.isFinite(v));
+  if(!peak.length){
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.font = '14px ui-sans-serif';
+    ctx.fillText('No Peak Force values to chart.', 12, 22);
+    return;
+  }
+  const work = rounds.map(r=>r.workDone).filter(v=>Number.isFinite(v));
+  const overlayWork = !!opts.overlayWork && work.length>1;
+
+  const xPad=34, yPad=18, plotW=W-xPad*2, plotH=H-yPad*2;
+
+  const minX = Math.min(...rounds.map(r=>r.traceIndex||0)), maxX = Math.max(...rounds.map(r=>r.traceIndex||0));
+  const minP = Math.min(...peak), maxP = Math.max(...peak);
+  const pPad = (maxP-minP)*0.08 || 1;
+  const yMinP = minP - pPad, yMaxP = maxP + pPad;
+
+  let yMinW=0, yMaxW=1;
+  if(overlayWork){
+    const minW=Math.min(...work), maxW=Math.max(...work);
+    const wPad=(maxW-minW)*0.08 || 0.01;
+    yMinW=minW-wPad; yMaxW=maxW+wPad;
+  }
+
+  const x = (xi)=>{
+    const t = (xi-minX)/((maxX-minX)||1);
+    return xPad + t*plotW;
+  };
+  const yP = (v)=>{
+    const t = (v-yMinP)/((yMaxP-yMinP)||1);
+    return yPad + (1-t)*plotH;
+  };
+  const yW = (v)=>{
+    const t = (v-yMinW)/((yMaxW-yMinW)||1);
+    return yPad + (1-t)*plotH;
+  };
+
+  // axes
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(xPad, yPad);
+  ctx.lineTo(xPad, yPad+plotH);
+  ctx.lineTo(xPad+plotW, yPad+plotH);
+  ctx.stroke();
+
+  // y labels (minimal)
+  ctx.fillStyle = 'rgba(255,255,255,.45)';
+  ctx.font = '12px ui-sans-serif';
+  ctx.fillText('Peak', 8, 22);
+  if(overlayWork) ctx.fillText('Work', 8, 38);
+
+  // Peak line
+  ctx.strokeStyle = 'rgba(124,220,255,.85)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  let started=false;
+  rounds.slice().sort((a,b)=>(a.traceIndex||0)-(b.traceIndex||0)).forEach((r)=>{
+    if(!Number.isFinite(r.peakForce)) return;
+    const xx=x(r.traceIndex||0), yy=yP(r.peakForce);
+    if(!started){ ctx.moveTo(xx,yy); started=true; } else ctx.lineTo(xx,yy);
+  });
+  ctx.stroke();
+
+  // Work line (optional)
+  if(overlayWork){
+    ctx.strokeStyle = 'rgba(255,180,92,.78)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    started=false;
+    rounds.slice().sort((a,b)=>(a.traceIndex||0)-(b.traceIndex||0)).forEach((r)=>{
+      if(!Number.isFinite(r.workDone)) return;
+      const xx=x(r.traceIndex||0), yy=yW(r.workDone);
+      if(!started){ ctx.moveTo(xx,yy); started=true; } else ctx.lineTo(xx,yy);
+    });
+    ctx.stroke();
+  }
+
+  // Points / highlights
+  rounds.forEach((r)=>{
+    const xi=r.traceIndex||0;
+    if(!Number.isFinite(r.peakForce)) return;
+    const xx=x(xi), yy=yP(r.peakForce);
+
+    // base style
+    let fill='rgba(124,220,255,.92)';
+    let stroke=null, lw=2, rad=4;
+
+    if(r.excluded){
+      fill='rgba(200,200,210,.55)';
+      rad=3.5;
+    }
+    if(r.tag==="Top5"){
+      fill='rgba(96,205,255,.95)';
+      rad=5;
+    }else if(r.tag==="Bottom5"){
+      fill='rgba(120,255,170,.92)';
+      rad=5;
+    }
+    if(r.flyer){
+      stroke='rgba(255,90,90,.95)';
+      lw=2.5;
+      rad=5.5;
+    }
+
+    ctx.beginPath();
+    ctx.arc(xx,yy,rad,0,Math.PI*2);
+    ctx.fillStyle=fill;
+    ctx.fill();
+    if(stroke){
+      ctx.strokeStyle=stroke;
+      ctx.lineWidth=lw;
+      ctx.stroke();
+    }
+  });
+
+  // Legend (tiny)
+  ctx.fillStyle='rgba(255,255,255,.52)';
+  ctx.font='12px ui-sans-serif';
+  ctx.fillText('Peak Force', xPad+8, yPad+14);
+  if(overlayWork) ctx.fillText('Work Done', xPad+92, yPad+14);
+}
+
+
 function sortRounds(a,b){
+  // Header-click sort takes precedence
+  if(state.sortField){
+    const f = state.sortField;
+    const dir = state.sortDir === "asc" ? 1 : -1;
+    const av = a[f];
+    const bv = b[f];
+    // booleans
+    if(typeof av === "boolean" || typeof bv === "boolean"){
+      const aa = av ? 1 : 0;
+      const bb = bv ? 1 : 0;
+      return (aa - bb) * dir;
+    }
+    // numbers
+    if(Number.isFinite(av) || Number.isFinite(bv)){
+      const aa = Number.isFinite(av) ? av : -1e18;
+      const bb = Number.isFinite(bv) ? bv : -1e18;
+      return (aa - bb) * dir;
+    }
+    // strings
+    const aa = (av==null) ? "" : String(av);
+    const bb = (bv==null) ? "" : String(bv);
+    return aa.localeCompare(bb) * dir;
+  }
+
   const key = state.sort;
   if(key==="score_desc") return b.score - a.score;
   if(key==="score_asc") return a.score - b.score;
@@ -1276,16 +1582,36 @@ function confLabel(c){
   if(c>=0.65) return "med";
   return "low";
 }
+
+function diagTip(label){
+  const m = {
+    "Flyer":"Flyer: this trace is a mechanical outlier vs the session baseline (robust outlier test). Consider segregating or re-prepping.",
+    "Force outlier":"Force outlier: Peak Force / Work / Position deviates strongly from the session median (robust z-score).",
+    "Early spike":"Early spike: unusually high resistance early in seating (possible rough mouth, insufficient chamfer, or neck donut contact).",
+    "Jagged":"Jagged: high curve roughness (possible carbon, inconsistent neck wall, corrosion, or damage).",
+    "End flat":"End flat: reduced slope near end of seating (often normal bearing-surface behavior; watch consistency).",
+    "End drop":"End drop: downward trend at end of seating (often normal; can indicate transition in bearing surface contact)."
+  };
+  if(m[label]) return m[label];
+  if(label && label.startsWith("End")) return "End-of-stroke feature: compare consistency across the batch.";
+  if(label && label.includes("ES")) return "ES rule: batch extreme spread exceeded the configured limit.";
+  return "Diagnostic flag";
+}
+function tagTip(tag){
+  if(tag==="Top5") return "Top5: one of the five HIGHEST Peak Force traces in this session (by Peak Force).";
+  if(tag==="Bottom5") return "Bottom5: one of the five LOWEST Peak Force traces in this session (by Peak Force).";
+  return "Tag";
+}
 function diagBadges(r){
   const parts = (r.diags||[]).slice();
   const flags = (r.flags||[]);
-  for(const f of flags){ if(!parts.includes(f)) parts.push(f); }
+  for(const f of flags){ if(f==="Top5"||f==="Bottom5") continue; if(!parts.includes(f)) parts.push(f); }
   const out = parts.map(p=>{
     const dot = p==="Flyer" ? "bad" :
                 p==="Force outlier" ? "warn" :
                 (p==="Early spike" || p==="Jagged" || p.startsWith("End")) ? "mid" :
                 "good";
-    return `<span class="badge"><span class="dot ${dot}"></span>${escapeHtml(p)}</span>`;
+    return `<span class="badge" title="${escapeHtml(diagTip(p))}"><span class="dot ${dot}"></span>${escapeHtml(p)}</span>`;
   });
   return out.join(" ");
 }
@@ -1317,6 +1643,11 @@ function render(){
   els.kPF.textContent = (sess.summary.peakMed==null) ? "—" : fmt(sess.summary.peakMed,3);
   els.kCurve.textContent = sess.hasCurves ? "yes" : "no";
 
+  // sync trace chart controls
+  if(els.tcOverlayWork) els.tcOverlayWork.checked = !!state.traceChart.overlayWork;
+  if(els.tcUseFiltered) els.tcUseFiltered.checked = !!state.traceChart.useFiltered;
+  if(els.tcShowExcluded) els.tcShowExcluded.checked = !!state.traceChart.showExcluded;
+
   const rows = sess.rounds
     .filter(r=>(!state.onlyAnom || r.score>=state.threshold))
     .filter(r=>(!state.hideExcluded || !r.excluded))
@@ -1336,15 +1667,21 @@ function render(){
     const flat  = r.endFlat!=null ? fmt(r.endFlat,4) : "—";
     const drop  = r.endDrop!=null ? fmt(r.endDrop,4) : "—";
     const exTxt = r.excluded ? "true" : "false";
-    const tagHtml = (r.tag ? r.tag.split(";").filter(Boolean) : []).map(tg=>`<span class="badge"><span class="dot ${tg==='Top5'?'mid':'warn'}"></span>${escapeHtml(tg)}</span>`).join(" ") || "—";
+    const tagHtml = (r.tag ? r.tag.split(";").filter(Boolean) : []).map(tg=>{
+      const tip = (tg==="Top5") ? "Tag: one of the five HIGHEST Peak Force traces in this session"
+                : (tg==="Bottom5") ? "Tag: one of the five LOWEST Peak Force traces in this session"
+                : "Tag";
+      const dot = (tg==="Top5") ? "good" : (tg==="Bottom5") ? "mid" : "warn";
+      return `<span class="badge" title="${escapeHtml(tip)}"><span class="dot ${dot}"></span>${escapeHtml(tg)}</span>`;
+    }).join(" ") || "—";
     return `<tr class="${cls} ${r.excluded?'excluded':''}">
       <td class="mono">${escapeHtml(r.trace)}</td>
-      <td><span class="badge"><span class="dot ${r.flyer?'bad':'good'}"></span>${flyerTxt}</span></td>
-      <td><span class="badge"><span class="dot ${r.excluded?'warn':'good'}"></span>${exTxt}</span></td>
+      <td><span class="badge" title="Flyer: mechanical outlier vs session baseline (force/position/work)."><span class="dot ${r.flyer?'bad':'good'}"></span>${flyerTxt}</span></td>
+      <td><span class="badge" title="Excluded: removed by ES rule or manual exclusion; still tracked for review/export."><span class="dot ${r.excluded?'warn':'good'}"></span>${exTxt}</span></td>
       <td>${tagHtml}</td>
       <td>${diagBadges(r)}</td>
       <td>${escapeHtml(r.cause)}</td>
-      <td><span class="badge"><span class="dot ${conf==='high'?'bad':conf==='med'?'warn':conf==='low'?'mid':'good'}"></span>${conf}</span></td>
+      <td><span class="badge" title="Confidence: how strongly the data supports the Cause label."><span class="dot ${conf==='high'?'bad':conf==='med'?'warn':conf==='low'?'mid':'good'}"></span>${conf}</span></td>
       <td class="mono">${fmt(r.score,2)}</td>
       <td>${escapeHtml(r.driver)}</td>
       <td class="mono">${fmt(r.peakForce,3)}</td>
@@ -1359,6 +1696,7 @@ function render(){
   }).join("");
 
   els.tbody.innerHTML = body;
+  renderTraceChart();
 }
 
 /* ========== export ========== */
@@ -1471,9 +1809,33 @@ els.tabSessions.addEventListener('click', ()=>{
 });
 els.btnExportSessions.addEventListener('click', exportSessionsCSV);
 
+// Trace chart controls
+if(els.tcOverlayWork) els.tcOverlayWork.addEventListener('change', ()=>{ state.traceChart.overlayWork = els.tcOverlayWork.checked; renderTraceChart(); });
+if(els.tcUseFiltered) els.tcUseFiltered.addEventListener('change', ()=>{ state.traceChart.useFiltered = els.tcUseFiltered.checked; renderTraceChart(); });
+if(els.tcShowExcluded) els.tcShowExcluded.addEventListener('change', ()=>{ state.traceChart.showExcluded = els.tcShowExcluded.checked; renderTraceChart(); });
+
+
 els.onlyAnom.addEventListener('change', ()=>{ state.onlyAnom = els.onlyAnom.checked; render(); });
 els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim(); render(); });
-els.sortSel.addEventListener('change', ()=>{ state.sort = els.sortSel.value; render(); });
+els.sortSel.addEventListener('change', ()=>{
+  const v = els.sortSel.value;
+  if(v === 'custom'){
+    // Only meaningful if a header sort is active
+    if(!state.sortField){
+      // revert to previous non-custom choice
+      els.sortSel.value = state.sort && state.sort !== 'custom' ? state.sort : 'score_desc';
+    } else {
+      state.sort = 'custom';
+    }
+    render();
+    return;
+  }
+  state.sort = v;
+  state.sortField = null;
+  state.sortDir = null;
+  document.querySelectorAll('th').forEach(x=>x.classList.remove('sortedAsc','sortedDesc'));
+  render();
+});
 
 els.baseSel.addEventListener('change', ()=>{
   state.baselineMode = els.baseSel.value;
@@ -1508,6 +1870,7 @@ els.btnClear.addEventListener('click', ()=>{
 
 /* ========== init baseline + render ========== */
 state.baseline = loadBaseline();
+setupHeaderSort();
 render();
 
 // Small hint to show injection warning if console shows the secdomcheck pattern
