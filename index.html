@@ -5,7 +5,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>AMP CSV Anomaly + Curve Diagnostics</title>
+<title>AMP CSV Anomaly + Curve Diagnostics — v3.2 Release</title>
 <style>
   :root{
     --bg0:#0b1220; --bg1:#0f1b2e; --card:#0f2234cc; --card2:#0b1a2b;
@@ -104,6 +104,7 @@
     padding:8px 10px; vertical-align:middle;
   }
   tbody tr:hover{background:rgba(56,189,248,.06)}
+  tbody tr.selected{outline:2px solid rgba(124,220,255,.55); outline-offset:-2px; background:rgba(124,220,255,.10)}
   tbody tr.normal{background:transparent}
   tbody tr.moderate{background:rgba(56,189,248,.06)}
   tbody tr.high{background:rgba(245,158,11,.08)}
@@ -280,7 +281,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
   <div class="suiteHeader__left">
     <div class="suiteHeader__topline">
       <div class="suiteHeader__title">AMP Anomaly Finder</div>
-      <div class="suiteHeader__pill">v3.10</div>
+      <div class="suiteHeader__pill">v3.2</div>
       <div class="suiteHeader__pill suiteHeader__pill--muted">offline</div>
     </div>
     <div class="suiteHeader__tagline">Upload AMP “Press” CSV exports (wide). Scores anomalies + adds curve diagnostics (early spike, jaggedness, end flat/drop) when curve data exists.</div>
@@ -289,6 +290,13 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
   <div class="suiteHeader__right">
     <div class="suiteHeader__actions">
       <button class="btn secondary" id="btnExport">Export shown (CSV)</button>
+      
+      <button class="btn secondary" id="btnExportJSON" title="Export loaded sessions + baseline + settings as JSON">Export .json</button>
+      <button class="btn secondary" id="btnImportJSON" title="Import a previously exported JSON package">Import .json</button>
+      <input id="jsonIn" type="file" accept=".json,application/json" style="display:none" />
+<button class="btn secondary" id="btnCopy" title="Copy the currently shown table rows as CSV to clipboard">Copy shown</button>
+      <button class="btn secondary" id="btnClearSort" title="Clear header-click sort (revert to Sort dropdown)">Clear sort</button>
+      <button class="btn secondary" id="btnReset" title="Restore default view settings">Reset defaults</button>
       <button class="btn secondary" id="btnClear">Clear</button>
     </div>
     <div class="suiteHeader__badge suiteHeader__badge--img" title="Target"><img src="data:image/jpeg;base64,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" alt="Target"><span class="suiteHeader__badgeText">AMP</span></div>
@@ -321,6 +329,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
         <label>Anomaly threshold: <span class="mono" id="thVal">2.50</span></label>
         <input id="th" type="range" min="0.5" max="5.0" step="0.05" value="2.5"/>
         <div class="tog"><input id="onlyAnom" type="checkbox"/><label for="onlyAnom">Only anomalies</label></div>
+        <div class="tog"><input id="onlyActionable" type="checkbox"/><label for="onlyActionable" title="Shows Score ≥ threshold OR Flyer OR Excluded">Only actionable</label></div>
       
       <div class="control">
         <label>Peak Force ES limit (lb): <span class="mono" id="esVal">20</span></label>
@@ -426,6 +435,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
       <span class="chip" id="curveChip">Curve: —</span>
       <span class="chip" id="baseChip">Baseline: none</span>
       <span class="chip" id="showChip">Shown: —</span>
+      <span class="chip" id="filterChip" style="display:none">Filters: —</span>
     </div>
 
     <div id="empty" class="warnBox">
@@ -531,17 +541,257 @@ const state = {
   hideExcluded: false,
   view: 'rounds',
   onlyAnom: false,
+  onlyActionable: false,
   query: "",
   sort: "score_desc",
   baselineMode: "none", // none|active|custom
   baseline: null, // {metrics:{key:{med}}, curves:{key:{med}}}
   traceChart: { overlayWork:false, useFiltered:false, showExcluded:true },
   shownRows: [],
+  selectedRowIdx: -1,
   shotLedger: null,
   corr: { points: [], hoverIdx: -1 },
   tcPoints: [],
 
 };
+
+
+/* ========== settings persistence (Phase 2) ========== */
+const SETTINGS_KEY = 'amp_anomaly_finder_settings_v1';
+const DEFAULTS = Object.freeze({
+  threshold: 2.5,
+  esLimit: 20,
+  esAutoExclude: true,
+  hideExcluded: false,
+  onlyAnom: false,
+  onlyActionable: false,
+  query: '',
+  sort: 'score_desc',
+  baselineMode: 'none'
+});
+
+
+const BUILD_TAG = "v3.10-phase8-json";
+
+function exportPreambleLines(kind){
+  const sess = (typeof getActiveSession === 'function') ? getActiveSession() : null;
+  const lines = [];
+  const now = new Date();
+  lines.push(`# amp_anomaly_finder_export=${kind}`);
+  lines.push(`# build=${BUILD_TAG}`);
+  lines.push(`# exported_at=${now.toISOString()}`);
+  lines.push(`# threshold=${Number(state.threshold).toFixed(2)}`);
+  lines.push(`# esLimit=${Number(state.esLimit)}`);
+  lines.push(`# esAutoExclude=${!!state.esAutoExclude}`);
+  lines.push(`# hideExcluded=${!!state.hideExcluded}`);
+  lines.push(`# onlyAnom=${!!state.onlyAnom}`);
+  lines.push(`# onlyActionable=${!!state.onlyActionable}`);
+  lines.push(`# query=${(state.q||"").replace(/\s+/g,' ').trim()}`);
+  lines.push(`# sort=${String(state.sort||"custom")}`);
+  lines.push(`# baselineMode=${String(state.baselineMode||"none")}`);
+  if(sess && sess.name) lines.push(`# activeSession=${String(sess.name)}`);
+  return lines;
+}
+
+function downloadTextFile(filename, text, mime){
+  const blob = new Blob([text], {type: mime || "text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+function buildJSONPackage(){
+  // Keep this focused: sessions + baseline + core settings needed to reproduce a view
+  const pkg = {
+    schema: "amp_anomaly_finder_json",
+    version: 1,
+    build: BUILD_TAG,
+    exportedAt: new Date().toISOString(),
+    settings: {
+      threshold: state.threshold,
+      esLimit: state.esLimit,
+      esAutoExclude: state.esAutoExclude,
+      hideExcluded: state.hideExcluded,
+      onlyAnom: state.onlyAnom,
+      onlyActionable: state.onlyActionable,
+      query: state.query,
+      sort: state.sort,
+      baselineMode: state.baselineMode
+    },
+    data: {
+      activeIndex: state.activeIndex,
+      baseline: state.baseline || null,
+      sessions: state.sessions || []
+    }
+  };
+  return pkg;
+}
+
+function exportJSON(){
+  const pkg = buildJSONPackage();
+  const niceName = (state.sessions && state.sessions.length===1)
+    ? (state.sessions[0].name || "session")
+    : "amp_sessions";
+  const fn = `${niceName}_AMP_Anomaly_Finder.json`.replace(/[^a-zA-Z0-9._-]+/g,'_');
+  downloadTextFile(fn, JSON.stringify(pkg, null, 2), "application/json");
+}
+
+function applyImportedSettings(s){
+  if(!s) return;
+  // apply to state first
+  if(typeof s.threshold === "number") state.threshold = s.threshold;
+  if(typeof s.esLimit === "number") state.esLimit = s.esLimit;
+  if(typeof s.esAutoExclude === "boolean") state.esAutoExclude = s.esAutoExclude;
+  if(typeof s.hideExcluded === "boolean") state.hideExcluded = s.hideExcluded;
+  if(typeof s.onlyAnom === "boolean") state.onlyAnom = s.onlyAnom;
+  if(typeof s.onlyActionable === "boolean") state.onlyActionable = s.onlyActionable;
+  if(typeof s.query === "string") state.query = s.query;
+  if(typeof s.sort === "string") state.sort = s.sort;
+  if(typeof s.baselineMode === "string") state.baselineMode = s.baselineMode;
+
+  // sync UI controls (guard if element missing in older builds)
+  if(els.th) els.th.value = state.threshold;
+  if(els.thVal) els.thVal.textContent = state.threshold.toFixed(2);
+  if(els.es) els.es.value = state.esLimit;
+  if(els.esVal) els.esVal.textContent = String(state.esLimit);
+  if(els.esAuto) els.esAuto.checked = !!state.esAutoExclude;
+  if(els.hideEx) els.hideEx.checked = !!state.hideExcluded;
+  if(els.onlyAnom) els.onlyAnom.checked = !!state.onlyAnom;
+  if(els.onlyActionable) els.onlyActionable.checked = !!state.onlyActionable;
+  if(els.q) els.q.value = state.query || "";
+  if(els.sortSel) els.sortSel.value = state.sort || "score_desc";
+  if(els.baseSel) els.baseSel.value = state.baselineMode || "none";
+}
+
+function importJSONText(text){
+  let pkg;
+  try{
+    pkg = JSON.parse(text);
+  }catch(e){
+    alert("Invalid JSON file.");
+    return;
+  }
+  if(!pkg || pkg.schema !== "amp_anomaly_finder_json"){
+    alert("This JSON doesn't look like an AMP Anomaly Finder export.");
+    return;
+  }
+  if(pkg.version !== 1){
+    alert("Unsupported JSON export version: " + pkg.version);
+    return;
+  }
+
+  // data restore
+  const data = pkg.data || {};
+  if(Array.isArray(data.sessions)){
+    state.sessions = data.sessions;
+  }else{
+    state.sessions = [];
+  }
+  state.activeIndex = Math.max(0, Math.min((data.activeIndex||0), Math.max(0, state.sessions.length-1)));
+  state.baseline = data.baseline || null;
+
+  // settings restore
+  applyImportedSettings(pkg.settings || null);
+
+  // post-load safety: normalize derived fields if missing
+  // (older exports or hand-edited JSON)
+  for(const sess of (state.sessions||[])){
+    if(!sess || !Array.isArray(sess.rounds)) continue;
+    // ensure name exists
+    if(!sess.name) sess.name = sess.filename || "Imported session";
+    // recompute tags/exclusions if function exists
+    if(typeof recomputeSessionPostFlags === "function"){
+      try{ recomputeSessionPostFlags(sess); }catch(e){}
+    }
+  }
+
+  // refresh UI
+  if(typeof renderSessionOptions === "function") renderSessionOptions();
+  saveSettings();
+  render();
+}
+
+
+
+
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if(!raw) return {...DEFAULTS};
+    const parsed = JSON.parse(raw);
+    return {...DEFAULTS, ...(parsed||{})};
+  }catch(e){
+    return {...DEFAULTS};
+  }
+}
+
+function saveSettings(){
+  try{
+    const out = {
+      threshold: Number(state.threshold),
+      esLimit: Number(state.esLimit),
+      esAutoExclude: !!state.esAutoExclude,
+      hideExcluded: !!state.hideExcluded,
+      onlyAnom: !!state.onlyAnom,
+      onlyActionable: !!state.onlyActionable,
+      query: String(state.query||''),
+      sort: String(state.sort||DEFAULTS.sort),
+      baselineMode: String(state.baselineMode||DEFAULTS.baselineMode)
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(out));
+  }catch(e){}
+}
+
+function applySettingsToStateAndUI(s){
+  // State
+  state.threshold = Number.isFinite(Number(s.threshold)) ? Number(s.threshold) : DEFAULTS.threshold;
+  state.esLimit = Number.isFinite(Number(s.esLimit)) ? Number(s.esLimit) : DEFAULTS.esLimit;
+  state.esAutoExclude = ('esAutoExclude' in s) ? !!s.esAutoExclude : DEFAULTS.esAutoExclude;
+  state.hideExcluded = ('hideExcluded' in s) ? !!s.hideExcluded : DEFAULTS.hideExcluded;
+  state.onlyAnom = ('onlyAnom' in s) ? !!s.onlyAnom : DEFAULTS.onlyAnom;
+  state.onlyActionable = ('onlyActionable' in s) ? !!s.onlyActionable : DEFAULTS.onlyActionable;
+  state.query = (typeof s.query === 'string') ? s.query : DEFAULTS.query;
+  state.sort = (typeof s.sort === 'string') ? s.sort : DEFAULTS.sort;
+  state.baselineMode = (typeof s.baselineMode === 'string') ? s.baselineMode : DEFAULTS.baselineMode;
+
+  // UI controls
+  if(els.th){ els.th.value = String(state.threshold); els.thVal.textContent = state.threshold.toFixed(2); }
+  if(els.es){ els.es.value = String(state.esLimit); els.esVal.textContent = String(state.esLimit); }
+  if(els.esAuto){ els.esAuto.checked = !!state.esAutoExclude; }
+  if(els.hideEx){ els.hideEx.checked = !!state.hideExcluded; }
+  if(els.onlyAnom){ els.onlyAnom.checked = !!state.onlyAnom; }
+  if(els.onlyActionable){ els.onlyActionable.checked = !!state.onlyActionable; }
+  if(els.q){ els.q.value = state.query || ''; }
+
+  // Sort: reset header sort unless custom is explicitly in play
+  if(els.sortSel){
+    if(state.sort === 'custom'){
+      els.sortSel.value = 'custom';
+    }else{
+      els.sortSel.value = state.sort || DEFAULTS.sort;
+      state.sortField = null;
+      state.sortDir = null;
+      document.querySelectorAll('th').forEach(x=>x.classList.remove('sortedAsc','sortedDesc'));
+    }
+  }
+
+  if(els.baseSel){
+    // allow only valid values
+    const v = (state.baselineMode || 'none');
+    els.baseSel.value = (['none','active','custom'].includes(v) ? v : 'none');
+  }
+}
+
+function resetDefaults(){
+  applySettingsToStateAndUI({...DEFAULTS});
+  // do NOT clear saved baseline (that has its own buttons)
+  saveSettings();
+}
+
 
 const els = {
   fileIn: document.getElementById('fileIn'),
@@ -554,12 +804,19 @@ const els = {
   esAuto: document.getElementById('esAuto'),
   hideEx: document.getElementById('hideEx'),
   onlyAnom: document.getElementById('onlyAnom'),
+  onlyActionable: document.getElementById('onlyActionable'),
   q: document.getElementById('q'),
   sortSel: document.getElementById('sortSel'),
   baseSel: document.getElementById('baseSel'),
   btnSaveBase: document.getElementById('btnSaveBase'),
   btnClrBase: document.getElementById('btnClrBase'),
   btnExport: document.getElementById('btnExport'),
+  btnExportJSON: document.getElementById('btnExportJSON'),
+  btnImportJSON: document.getElementById('btnImportJSON'),
+  jsonIn: document.getElementById('jsonIn'),
+  btnCopy: document.getElementById('btnCopy'),
+  btnClearSort: document.getElementById('btnClearSort'),
+  btnReset: document.getElementById('btnReset'),
   btnClear: document.getElementById('btnClear'),
   empty: document.getElementById('empty'),
   tableWrap: document.getElementById('tableWrap'),
@@ -583,6 +840,7 @@ const els = {
   curveChip: document.getElementById('curveChip'),
   baseChip: document.getElementById('baseChip'),
   showChip: document.getElementById('showChip'),
+  filterChip: document.getElementById('filterChip'),
   curveChip2: document.getElementById('curveChip'),
   injWarn: document.getElementById('injWarn'),
 
@@ -608,6 +866,18 @@ function toNum(x){
 function fmt(v, d=3){
   if(!Number.isFinite(v)) return "—";
   return Number(v).toFixed(d);
+}
+
+function strengthTier(az){
+  az = Math.abs(Number(az)||0);
+  if(az>=2.8) return 3;
+  if(az>=2.2) return 2;
+  if(az>=1.6) return 1;
+  return 0;
+}
+function strengthGlyph(t){
+  const n = Number(t)||0;
+  return n<=0 ? "—" : "•".repeat(Math.min(3, Math.max(1,n)));
 }
 function median(arr){
   const a = arr.filter(v=>Number.isFinite(v)).slice().sort((x,y)=>x-y);
@@ -649,6 +919,8 @@ function clsFromScore(score){
 function escapeHtml(s){
   return String(s??"").replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
+
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,'&quot;'); }
 function pickDot(bucket){
   if(bucket==="flyer") return "bad";
   if(bucket==="high") return "warn";
@@ -1103,6 +1375,19 @@ function assignDiagnosticsAndCause(r, hasCurves){
 
   const t = state.threshold;
 
+
+  // severity tiers for curve diagnostics (for UI glyphs)
+  if(hasCurves){
+    r.diagStrength = {
+      earlySpike: strengthTier(azEarly),
+      jagged: strengthTier(azRough),
+      endFlat: strengthTier(azFlat),
+      endDrop: strengthTier(azDrop)
+    };
+  } else {
+    r.diagStrength = null;
+  }
+
   // add diag tags based on notable drivers (use fixed smaller thresholds for flags)
   if(azPeak>=2.2 || azWork>=2.2 || azTerm>=2.2) diags.push("Force outlier");
   if(hasCurves){
@@ -1121,9 +1406,29 @@ function assignDiagnosticsAndCause(r, hasCurves){
   if(hasCurves && azEarly>=1.6) candidates.push([azEarly, "Case mouth / chamfer / donut", 0.70]);
   if(hasCurves && azRough>=1.6) candidates.push([azRough, "Carbon / neck-wall inconsistency / damage", 0.68]);
   if(azPeak>=1.8 || azWork>=1.8) candidates.push([Math.max(azPeak,azWork), "Neck tension / sizing / anneal variance", 0.64]);
-  if(hasCurves && (azFlat>=1.8 || azDrop>=1.8)) candidates.push([Math.max(azFlat,azDrop), "Bearing-surface transition or seating setup inconsistency", 0.55]);
+  if(hasCurves && (azFlat>=1.8 || azDrop>=1.8)) candidates.push([Math.max(azFlat, azDrop), "Bearing surface / seating setup inconsistency", 0.55]);
 
   // baseline drift could be session-wide; for per-round we keep cause from z.
+  // Build explainability: top contributing standardized signals (z-scores)
+  const contrib = [];
+  // force/scalars
+  contrib.push(["Peak Force", r.z.peakForce||0]);
+  contrib.push(["Work Done", r.z.workDone||0]);
+  contrib.push(["Terminal Force", r.z.terminalForce||0]);
+  if(hasCurves){
+    contrib.push(["Early spike", r.z.earlySpike||0]);
+    contrib.push(["Jaggedness", r.z.roughness||0]);
+    contrib.push(["End flat", r.z.endFlat||0]);
+    contrib.push(["End drop", r.z.endDrop||0]);
+  } else {
+    r.noCurveData = true;
+  }
+  const contribTop = contrib
+    .map(([lab,z])=>({lab, z:Number(z)||0, az:Math.abs(Number(z)||0)}))
+    .filter(o=>o.az>=1.0)
+    .sort((a,b)=>b.az-a.az)
+    .slice(0,3);
+
   candidates.sort((a,b)=>b[0]-a[0]);
 
   if(!candidates.length){
@@ -1138,6 +1443,15 @@ function assignDiagnosticsAndCause(r, hasCurves){
   if(r.flyer) conf = Math.min(0.98, conf + 0.08);
   r.cause = cause;
   r.conf = conf;
+
+  // Human-readable one-liner for tooltips
+  if(typeof contribTop !== "undefined" && contribTop && contribTop.length){
+    r.causeExplain = contribTop.map(o=>`${o.lab} ${o.z>=0?'+':''}${o.z.toFixed(2)}σ`).join(' • ');
+  } else if(r.noCurveData){
+    r.causeExplain = "No curve columns in this export (force-only signals).";
+  } else {
+    r.causeExplain = "—";
+  }
 }
 
 /* ========== baseline storage ========== */
@@ -1283,7 +1597,7 @@ function renderSessionsView(){
   // draw chart (median peak + ES)
   drawSessionChart(rows);
 
-  els.sessionsTbody.innerHTML = rows.map(r=>{
+  els.sessionsTbody.innerHTML = rows.map((r,i)=>{
     return `<tr data-idx="${r.idx}">
       <td title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</td>
       <td class="mono">${r.n}</td>
@@ -1459,7 +1773,7 @@ function exportSessionsCSV(){
     return s;
   };
   const header = ["Session","Rounds","Flyers","Anomalies","Peak Med","Peak ES","Work Med","Rough Med"];
-  const lines = [header.join(",")];
+  const lines = exportPreambleLines("shown_rounds").concat([header.join(",")]);
   for(const s of state.sessions){
     const row = [
       s.name,
@@ -1740,7 +2054,7 @@ function initTraceChartHover(){
         <span class="chip">${r.excluded?'Excluded':'Included'}</span>
         ${r.tag?`<span class="chip">${escapeHtml(r.tag)}</span>`:''}
       </div>
-      <div style="margin-top:6px; opacity:.9">Score: <span class="mono">${fmt(r.score,2)}</span> • Cause: ${escapeHtml(r.cause||'—')} • Conf: ${escapeHtml(confLabel(r.confidence||0))}</div>
+      <div style="margin-top:6px; opacity:.9">Score: <span class="mono">${fmt(r.score,2)}</span> • Cause: ${escapeHtml(r.cause||'—')} • Conf: ${escapeHtml(confLabel((r.confidence!=null? r.confidence : (r.conf!=null? r.conf : 0))))}</div>
       <div style="margin-top:6px; opacity:.85">Why: ${escapeHtml(why)}</div>
     `;
     showFloatTip(html, ev.clientX, ev.clientY);
@@ -1832,6 +2146,7 @@ function render(){
     els.curveChip.textContent="Curve: —";
     els.baseChip.textContent = `Baseline: ${state.baselineMode}`;
     els.showChip.textContent = "Shown: —";
+    if(els.filterChip){ els.filterChip.style.display="none"; els.filterChip.textContent="Filters: —"; }
     return;
   }
 
@@ -1854,8 +2169,11 @@ function render(){
   if(els.tcUseFiltered) els.tcUseFiltered.checked = !!state.traceChart.useFiltered;
   if(els.tcShowExcluded) els.tcShowExcluded.checked = !!state.traceChart.showExcluded;
 
+  const isActionable = (r)=> (r.score>=state.threshold) || !!r.flyer || !!r.excluded;
+
   const rows = sess.rounds
     .filter(r=>(!state.onlyAnom || r.score>=state.threshold))
+    .filter(r=>(!state.onlyActionable || isActionable(r)))
     .filter(r=>(!state.hideExcluded || !r.excluded))
     .filter(r=>matchesQuery(r, state.query))
     .slice()
@@ -1863,15 +2181,29 @@ function render(){
 
   state.shownRows = rows;
   els.showChip.textContent = `Shown: ${rows.length}`;
+  // active filter indicator
+  if(els.filterChip){
+    const f=[];
+    if(state.onlyActionable) f.push("Actionable");
+    if(state.onlyAnom) f.push("Anomalies");
+    if(state.hideExcluded) f.push("No excluded");
+    if(state.q && String(state.q).trim()) f.push("Search");
+    els.filterChip.style.display = f.length ? "inline-flex" : "none";
+    els.filterChip.textContent = `Filters: ${f.length ? f.join(" + ") : "—"}`;
+  }
 
-  const body = rows.map(r=>{
+  const body = rows.map((r,i)=>{
     const cls = clsFromScore(r.score);
     const flyerTxt = r.flyer ? "true" : "false";
     const conf = confLabel(r.conf);
-    const early = r.earlySpike!=null ? fmt(r.earlySpike,3) : "—";
-    const rough = r.roughness!=null ? fmt(r.roughness,4) : "—";
-    const flat  = r.endFlat!=null ? fmt(r.endFlat,4) : "—";
-    const drop  = r.endDrop!=null ? fmt(r.endDrop,4) : "—";
+    const early = (r.diagStrength && r.diagStrength.earlySpike) ? strengthGlyph(r.diagStrength.earlySpike) : (r.earlySpike!=null ? "•" : "—");
+    const rough = (r.diagStrength && r.diagStrength.jagged) ? strengthGlyph(r.diagStrength.jagged) : (r.roughness!=null ? "•" : "—");
+    const flat  = (r.diagStrength && r.diagStrength.endFlat) ? strengthGlyph(r.diagStrength.endFlat) : (r.endFlat!=null ? "•" : "—");
+    const drop  = (r.diagStrength && r.diagStrength.endDrop) ? strengthGlyph(r.diagStrength.endDrop) : (r.endDrop!=null ? "•" : "—");
+    const earlyTip = (r.z && r.z.earlySpike!=null) ? `Early spike z=${fmt(r.z.earlySpike,2)}` : (r.earlySpike!=null ? `Early spike=${fmt(r.earlySpike,3)}` : "Early spike: —");
+    const roughTip = (r.z && r.z.roughness!=null) ? `Jaggedness z=${fmt(r.z.roughness,2)}` : (r.roughness!=null ? `Jaggedness=${fmt(r.roughness,4)}` : "Jaggedness: —");
+    const flatTip  = (r.z && r.z.endFlat!=null) ? `End flat z=${fmt(r.z.endFlat,2)}` : (r.endFlat!=null ? `End flat=${fmt(r.endFlat,4)}` : "End flat: —");
+    const dropTip  = (r.z && r.z.endDrop!=null) ? `End drop z=${fmt(r.z.endDrop,2)}` : (r.endDrop!=null ? `End drop=${fmt(r.endDrop,4)}` : "End drop: —");
     const exTxt = r.excluded ? "true" : "false";
     const tagHtml = (r.tag ? r.tag.split(";").filter(Boolean) : []).map(tg=>{
       const tip = (tg==="Top5") ? "Tag: one of the five HIGHEST Peak Force traces in this session"
@@ -1880,13 +2212,13 @@ function render(){
       const dot = (tg==="Top5") ? "good" : (tg==="Bottom5") ? "mid" : "warn";
       return `<span class="badge" title="${escapeHtml(tip)}"><span class="dot ${dot}"></span>${escapeHtml(tg)}</span>`;
     }).join(" ") || "—";
-    return `<tr class="${cls} ${r.excluded?'excluded':''}">
+    return `<tr class="${cls} ${r.excluded?'excluded':''}" data-idx="${i}">
       <td class="mono">${escapeHtml(r.trace)}</td>
       <td><span class="badge" title="Flyer: mechanical outlier vs session baseline (force/position/work)."><span class="dot ${r.flyer?'bad':'good'}"></span>${flyerTxt}</span></td>
       <td><span class="badge" title="Excluded: removed by ES rule or manual exclusion; still tracked for review/export."><span class="dot ${r.excluded?'warn':'good'}"></span>${exTxt}</span></td>
       <td>${tagHtml}</td>
-      <td>${diagBadges(r)}</td>
-      <td>${escapeHtml(r.cause)}</td>
+      <td><span title="${escapeAttr(r.whyLine||r.causeExplain||'—')}">${diagBadges(r)}</span></td>
+      <td><span title="${escapeAttr(r.causeExplain||'—')}">${escapeHtml((r.cause && r.cause!=='—') ? r.cause : (r.noCurveData ? '— (no curve data)' : '—'))}</span></td>
       <td><span class="badge" title="Confidence: how strongly the data supports the Cause label."><span class="dot ${conf==='high'?'bad':conf==='med'?'warn':conf==='low'?'mid':'good'}"></span>${conf}</span></td>
       <td class="mono">${fmt(r.score,2)}</td>
       <td>${escapeHtml(r.driver)}</td>
@@ -1894,14 +2226,19 @@ function render(){
       <td class="mono">${fmt(r.workDone,3)}</td>
       <td class="mono">${fmt(r.startingPos,3)}</td>
       <td class="mono">${fmt(r.terminalForce,3)}</td>
-      <td class="mono">${early}</td>
-      <td class="mono">${rough}</td>
-      <td class="mono">${flat}</td>
-      <td class="mono">${drop}</td>
+      <td class="mono" title="${escapeAttr(earlyTip)}">${early}</td>
+      <td class="mono" title="${escapeAttr(roughTip)}">${rough}</td>
+      <td class="mono" title="${escapeAttr(flatTip)}">${flat}</td>
+      <td class="mono" title="${escapeAttr(dropTip)}">${drop}</td>
     </tr>`;
   }).join("");
 
   els.tbody.innerHTML = body;
+  if(els.btnClearSort){
+    const on = !!state.sortField;
+    els.btnClearSort.disabled = !on;
+    els.btnClearSort.style.opacity = on ? 1 : 0.55;
+  }
   renderTraceChart();
 }
 
@@ -1911,33 +2248,100 @@ function csvCell(v){
   if(/[",\n\r]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
   return s;
 }
-function exportShown(){
+function buildShownCSV(){
   const rows = state.shownRows || [];
-  if(!rows.length) return;
+  if(!rows.length) return "";
   const header = ["Session","Trace","Flyer","Excluded","Tag","Bucket","Score","Driver","Why","Cause","Confidence",
     "Peak Force","Work Done","Starting Pos","Terminal Force","Early Spike","Jaggedness","End Flat","End Drop"];
-  const lines = [header.join(",")];
+  const lines = exportPreambleLines("sessions_summary").concat([header.join(",")]);
   const sess = getActiveSession();
   for(const r of rows){
     lines.push([
       sess ? sess.name : "",
-      r.trace, r.flyer ? "true":"false", (r.excluded?"true":"false"), (r.tag||""), clsFromScore(r.score), fmt(r.score,2), r.driver,
+      r.trace,
+      r.flyer ? "Yes" : "No",
+      r.excluded ? "Yes" : "No",
+      r.tag || "",
+      clsFromScore(r.score),
+      fmt(r.score,2),
+      r.driver || "",
       ((r.diags||[]).concat(r.flags||[])).filter((v,i,a)=>a.indexOf(v)===i).join("; "),
-      r.cause,
-      confLabel(r.conf),
-      r.peakForce ?? "", r.workDone ?? "", r.startingPos ?? "", r.terminalForce ?? "",
-      r.earlySpike ?? "", r.roughness ?? "", r.endFlat ?? "", r.endDrop ?? ""
+      r.cause || "",
+      confLabel((r.confidence!=null? r.confidence : (r.conf!=null? r.conf : 0))),
+      r.peakForce==null? "" : r.peakForce,
+      r.workDone==null? "" : r.workDone,
+      r.startingPos==null? "" : r.startingPos,
+      r.terminalForce==null? "" : r.terminalForce,
+      r.earlySpike==null? "" : r.earlySpike,
+      r.roughness==null? "" : r.roughness,
+      r.endFlat==null? "" : r.endFlat,
+      r.endDrop==null? "" : r.endDrop
     ].map(csvCell).join(","));
   }
-  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  return lines.join("\n");
+}
+
+function exportShown(){
+  const csv = buildShownCSV();
+  if(!csv) return;
+  const blob = new Blob([csv], {type:"text/csv"});
   const a = document.createElement('a');
   const url = URL.createObjectURL(blob);
   a.href = url;
-  a.download = `amp_anomalies_${(sess?sess.name:"session").replace(/[^\w\-]+/g,'_').slice(0,60)}.csv`;
+  a.download = "amp_anomaly_shown.csv";
   document.body.appendChild(a);
   a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
+
+function flashStatus(msg){
+  try{
+    const el = document.getElementById('showChip');
+    if(!el) return;
+    const prev = el.textContent;
+    el.textContent = msg;
+    el.style.background = 'rgba(255,255,255,.16)';
+    setTimeout(()=>{ el.textContent = prev; el.style.background = ''; }, 1800);
+  }catch(e){}
+}
+
+async function copyShown(){
+  const csv = buildShownCSV();
+  if(!csv) return;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(csv);
+      flashStatus("Copied CSV ✓");
+      return;
+    }
+  }catch(e){}
+  // Fallback
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = csv;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    flashStatus("Copied CSV ✓");
+  }catch(e){
+    flashStatus("Copy failed");
+  }
+}
+
+function clearHeaderSort(){
+  state.sortField = null;
+  state.sortDir = null;
+  document.querySelectorAll('th').forEach(x=>x.classList.remove('sortedAsc','sortedDesc'));
+  saveSettings();
+  render();
+}
+
 
 /* ========== file loading ========== */
 async function loadFiles(fileList){
@@ -1981,6 +2385,7 @@ els.sessionSel.addEventListener('change', ()=>{
 els.th.addEventListener('input', ()=>{
   state.threshold = Number(els.th.value);
   els.thVal.textContent = state.threshold.toFixed(2);
+  saveSettings();
   render();
 });
 
@@ -1989,15 +2394,18 @@ els.es.addEventListener('input', ()=>{
   els.esVal.textContent = String(state.esLimit);
   // recompute ES exclusions/tags for all sessions
   state.sessions = state.sessions.map(s=>recomputeSessionPostFlags(s));
+  saveSettings();
   render();
 });
 els.esAuto.addEventListener('change', ()=>{
   state.esAutoExclude = els.esAuto.checked;
   state.sessions = state.sessions.map(s=>recomputeSessionPostFlags(s));
+  saveSettings();
   render();
 });
 els.hideEx.addEventListener('change', ()=>{
   state.hideExcluded = els.hideEx.checked;
+  saveSettings();
   render();
 });
 els.tabRounds.addEventListener('click', ()=>{
@@ -2258,8 +2666,9 @@ if(els.tcUseFiltered) els.tcUseFiltered.addEventListener('change', ()=>{ state.t
 if(els.tcShowExcluded) els.tcShowExcluded.addEventListener('change', ()=>{ state.traceChart.showExcluded = els.tcShowExcluded.checked; renderTraceChart(); });
 
 
-els.onlyAnom.addEventListener('change', ()=>{ state.onlyAnom = els.onlyAnom.checked; render(); });
-els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim(); render(); });
+els.onlyAnom.addEventListener('change', ()=>{ state.onlyAnom = els.onlyAnom.checked; saveSettings(); render(); });
+els.onlyActionable.addEventListener('change', ()=>{ state.onlyActionable = els.onlyActionable.checked; saveSettings(); render(); });
+els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim(); saveSettings(); render(); });
 els.sortSel.addEventListener('change', ()=>{
   const v = els.sortSel.value;
   if(v === 'custom'){
@@ -2270,6 +2679,7 @@ els.sortSel.addEventListener('change', ()=>{
     } else {
       state.sort = 'custom';
     }
+    saveSettings();
     render();
     return;
   }
@@ -2277,11 +2687,13 @@ els.sortSel.addEventListener('change', ()=>{
   state.sortField = null;
   state.sortDir = null;
   document.querySelectorAll('th').forEach(x=>x.classList.remove('sortedAsc','sortedDesc'));
+  saveSettings();
   render();
 });
 
 els.baseSel.addEventListener('change', ()=>{
   state.baselineMode = els.baseSel.value;
+  saveSettings();
   render();
 });
 els.btnSaveBase.addEventListener('click', ()=>{
@@ -2304,6 +2716,36 @@ els.btnClrBase.addEventListener('click', ()=>{
 });
 
 els.btnExport.addEventListener('click', exportShown);
+els.btnCopy && els.btnCopy.addEventListener('click', copyShown);
+els.btnClearSort && els.btnClearSort.addEventListener('click', clearHeaderSort);
+els.btnReset && els.btnReset.addEventListener('click', ()=>{
+  resetDefaults();
+  // if ES auto-exclude changed, recompute flags
+  state.sessions = state.sessions.map(s=>recomputeSessionPostFlags(s));
+  render();
+});
+
+els.btnExportJSON && els.btnExportJSON.addEventListener('click', exportJSON);
+
+els.btnImportJSON && els.btnImportJSON.addEventListener('click', ()=>{
+  if(els.jsonIn) els.jsonIn.click();
+});
+
+els.jsonIn && els.jsonIn.addEventListener('change', async (e)=>{
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  try{
+    const text = await f.text();
+    importJSONText(text);
+  }catch(err){
+    alert("Couldn't read that file.");
+  }finally{
+    // allow re-importing the same filename
+    e.target.value = "";
+  }
+});
+
+
 els.btnClear.addEventListener('click', ()=>{
   state.sessions = [];
   state.activeIndex = 0;
@@ -2313,6 +2755,8 @@ els.btnClear.addEventListener('click', ()=>{
 
 /* ========== init baseline + render ========== */
 state.baseline = loadBaseline();
+// load persisted view settings
+applySettingsToStateAndUI(loadSettings());
 setupHeaderSort();
 render();
 
