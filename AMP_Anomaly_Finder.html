@@ -1,10 +1,10 @@
 
-<!DOCTYPE html>
-<!-- saved from url=(0043)https://mrimp.github.io/AMP_Anomaly_Finder/ -->
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AMP CSV Anomaly + Curve Diagnostics — v3.3 UIUX1-5</title>
+<!DOCTYPE html>
+
+<html lang="en"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>AMP CSV Anomaly Finder — v3.4.3 RELEASE</title>
 <style>
     *{box-sizing:border-box}
   body{
@@ -347,353 +347,319 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
 
 
 
-/* Curve diagnostics columns (auto-hidden when curve data isn't available) */
-.curveCol{}
-.noCurves .curveCol{ display:none !important; }
+/* UX additions */
+.chipBtn{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  color: rgba(255,255,255,.86);
+  cursor:pointer;
+}
+.chipBtn:hover{ transform: translateY(-1px); }
+.chipBtn:active{ transform: translateY(0px); }
+.chipBtn.on{ background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.35); }
+.chipBtn.off{ opacity:.75; }
+.chipBtn.small{ padding:5px 9px; font-size:12px; }
 
-</style>
+details.advDetails > summary{
+  cursor:pointer;
+  list-style:none;
+}
+details.advDetails > summary::-webkit-details-marker { display:none; }
+
+.modalBackdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.55);
+  display:none; align-items:center; justify-content:center;
+  z-index: 50;
+}
+.modalBackdrop.show{ display:flex; }
+.modalCard{
+  width:min(720px, calc(100vw - 24px));
+  max-height: min(80vh, 720px);
+  overflow:auto;
+  background: rgba(20,22,26,.96);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  padding:14px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+}
+.modalGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:10px;
+}
+@media (max-width:640px){
+  .modalGrid{ grid-template-columns: 1fr; }
+}
+.colGroupTitle{ font-weight:900; margin-top:8px; }
+.colItem{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:12px; }
+.colItem:hover{ background: rgba(255,255,255,.06); }
+
+</style><style id="colHideStyle"></style>
 <style>
             .captureFixedShim { position: absolute !important; }
             .captureStickyShim { position: static !important; }
             .captureHeaderShim { position: relative !important; }
-        </style><link href="./AMP CSV Anomaly + Curve Diagnostics — v3.3 UIUX1-5_files/css2" rel="stylesheet"><style id="ar138f7d727d0style">
+        </style><style id="ar138f7d727d0style">
 				.ar138f7d727d0hidden{ position:absolute !important; opacity:0 !important; pointer-events:none !important}
 			</style></head>
 <body>
 <header class="suiteHeader">
-  <div class="suiteHeader__left">
-    <div class="suiteHeader__topline">
-      <div class="suiteHeader__title">AMP Anomaly Finder</div>
-      <div class="suiteHeader__pill"><span id="buildTagPill">v3.3 UIUX1-5</span></div>
-      <div class="suiteHeader__pill suiteHeader__pill--muted">offline</div>
-    </div>
-    <div class="suiteHeader__tagline">Upload AMP “Press” CSV exports. Scores anomalies + explainable causes. Curve diagnostics are hidden unless curve columns are detected (most AMP exports don’t include them).</div>
-  </div>
-
-  <div class="suiteHeader__right">
-    <div class="suiteHeader__actions">
-      <button class="btn secondary" id="btnExport">Export shown (CSV)</button>
-
-      <div class="menuWrap" style="position:relative">
-        <button class="btn secondary" id="btnMore" type="button" aria-haspopup="true" aria-expanded="false" title="More actions">⋯</button>
-        <div class="menu" id="moreMenu" role="menu" aria-label="More actions" style="display:none">
-          <button class="menuItem" id="miExportJSON" type="button">Export .json</button>
-          <button class="menuItem" id="miImportJSON" type="button">Import .json</button>
-          <div class="menuSep"></div>
-          <button class="menuItem" id="miCopy" type="button">Copy shown</button>
-          <button class="menuItem" id="miClearSort" type="button">Clear sort</button>
-          <button class="menuItem" id="miReset" type="button">Reset defaults</button>
-          <div class="menuSep"></div>
-          <button class="menuItem danger" id="miClear" type="button">Clear</button>
-        </div>
-      </div>
-
-      
-      <button class="btn secondary" id="btnExportJSON" style="display:none" aria-hidden="true">Export .json</button>
-      <button class="btn secondary" id="btnImportJSON" style="display:none" aria-hidden="true">Import .json</button>
-      <button class="btn secondary" id="btnCopy" style="display:none" aria-hidden="true">Copy shown</button>
-      <button class="btn secondary" id="btnClearSort" style="display:none" aria-hidden="true">Clear sort</button>
-      <button class="btn secondary" id="btnReset" style="display:none" aria-hidden="true">Reset defaults</button>
-      <button class="btn secondary" id="btnClear" style="display:none" aria-hidden="true">Clear</button>
-
-      <input id="jsonIn" type="file" accept=".json,application/json" style="display:none">
-
-    </div>
-    <div class="suiteHeader__badge suiteHeader__badge--img" title="Target"><img src="data:image/jpeg;base64,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" alt="Target"><span class="suiteHeader__badgeText">AMP</span></div>
-  </div>
+<div class="suiteHeader__left">
+<div class="suiteHeader__topline">
+<div class="suiteHeader__title">AMP Anomaly Finder</div>
+<div class="suiteHeader__pill"><span id="buildTagPill">v3.4.3 RELEASE</span></div>
+<div class="suiteHeader__pill suiteHeader__pill--muted">offline</div>
+</div>
+<div class="suiteHeader__tagline">Upload AMP “Press” CSV exports. Scores anomalies + explainable causes. Diagnostics are hidden unless curve columns are detected (most AMP exports don’t include them).</div>
+</div>
+<div class="suiteHeader__right">
+<div class="suiteHeader__actions">
+<button class="btn secondary" id="btnExport">Export shown (CSV)</button>
+<div class="menuWrap" style="position:relative">
+<button aria-expanded="false" aria-haspopup="true" class="btn secondary" id="btnMore" title="More actions" type="button">⋯</button>
+<div aria-label="More actions" class="menu" id="moreMenu" role="menu" style="display:none">
+<button class="menuItem" id="miExportJSON" type="button">Export .json</button>
+<button class="menuItem" id="miImportJSON" type="button">Import .json</button>
+<div class="menuSep"></div>
+<button class="menuItem" id="miCopy" type="button">Copy shown</button>
+<button class="menuItem" id="miClearSort" type="button">Clear sort</button>
+<button class="menuItem" id="miReset" type="button">Reset defaults</button>
+<div class="menuSep"></div>
+<button class="menuItem danger" id="miClear" type="button">Clear</button>
+</div>
+</div>
+<button aria-hidden="true" class="btn secondary" id="btnExportJSON" style="display:none">Export .json</button>
+<button aria-hidden="true" class="btn secondary" id="btnImportJSON" style="display:none">Import .json</button>
+<button aria-hidden="true" class="btn secondary" id="btnCopy" style="display:none">Copy shown</button>
+<button aria-hidden="true" class="btn secondary" id="btnClearSort" style="display:none">Clear sort</button>
+<button aria-hidden="true" class="btn secondary" id="btnReset" style="display:none">Reset defaults</button>
+<button aria-hidden="true" class="btn secondary" id="btnClear" style="display:none">Clear</button>
+<input accept=".json,application/json" id="jsonIn" style="display:none" type="file"/>
+</div>
+<div class="suiteHeader__badge suiteHeader__badge--img" title="Target"><img alt="Target" src="data:image/jpeg;base64,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"/><span class="suiteHeader__badgeText">AMP</span></div>
+</div>
 </header>
-
 <main>
-  <section class="card">
-    <h2>Upload &amp; Controls</h2>
-    <div class="body">
-      <div id="wizard" class="wizard" style="margin-bottom:10px">
-        <div class="wizStep active" data-step="1"><span class="wizDot"></span><span><strong>1</strong> Upload</span></div>
-        <div class="wizStep" data-step="2"><span class="wizDot"></span><span><strong>2</strong> Detected</span></div>
-        <div class="wizStep" data-step="3"><span class="wizDot"></span><span><strong>3</strong> Review anomalies</span></div>
-        <div class="wizStep" data-step="4"><span class="wizDot"></span><span><strong>4</strong> Export / save</span></div>
-      </div>
-
-      <div class="row">
-        <label class="btn" for="fileIn">Choose files</label>
-        <input id="fileIn" type="file" accept=".csv,text/csv" multiple="">
-      </div>
-
-      <div id="drop" class="drop" style="margin-top:10px">
-        <strong>Drop AMP CSV files here</strong><br>
-        <span class="small">Each file becomes a session. Works offline (no internet needed).</span>
-      </div>
-      <div id="detectSummary" class="card" style="margin-top:10px; padding:10px; display:none; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius:16px">
-        <div class="row" style="justify-content:space-between; align-items:center; gap:10px">
-          <div>
-            <strong>Detected fields</strong>
-            <span class="small muted" id="detectSummaryTitle" style="margin-left:8px"></span>
-          </div>
-          <button class="btn secondary" id="btnClearDetect" type="button">Dismiss</button>
-        </div>
-        <div class="small" id="detectSummaryBody" style="margin-top:6px; line-height:1.35"></div>
-      </div>
-
-
-
-      <div class="control" style="margin-top:12px">
-        <label>Session</label>
-        <select id="sessionSel"></select>
-        <div class="hint" style="margin-top:6px">
+<section class="card">
+<h2>Upload &amp; Controls</h2>
+<div class="body">
+<div class="wizard" id="wizard" style="margin-bottom:10px">
+<div class="wizStep active" data-step="1"><span class="wizDot"></span><span><strong>1</strong> Upload</span></div>
+<div class="wizStep" data-step="2"><span class="wizDot"></span><span><strong>2</strong> Detected</span></div>
+<div class="wizStep" data-step="3"><span class="wizDot"></span><span><strong>3</strong> Review anomalies</span></div>
+<div class="wizStep" data-step="4"><span class="wizDot"></span><span><strong>4</strong> Export / save</span></div>
+</div>
+<div class="row">
+<label class="btn" for="fileIn">Choose files</label>
+<input accept=".csv,text/csv" id="fileIn" multiple="" type="file"/>
+</div>
+<div class="drop" id="drop" style="margin-top:10px">
+<strong>Drop AMP CSV files here</strong><br/>
+<span class="small">Each file becomes a session. Works offline (no internet needed).</span>
+</div>
+<div class="card" id="detectSummary" style="margin-top:10px; padding:10px; display:none; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius:16px">
+<div class="row" style="justify-content:space-between; align-items:center; gap:10px">
+<div>
+<strong>Detected fields</strong>
+<span class="small muted" id="detectSummaryTitle" style="margin-left:8px"></span>
+</div>
+<button class="btn secondary" id="btnClearDetect" type="button">Dismiss</button>
+</div>
+<div class="small" id="detectSummaryBody" style="margin-top:6px; line-height:1.35"></div>
+</div>
+<div class="control" style="margin-top:12px">
+<label>Session</label>
+<select id="sessionSel"></select>
+<div class="hint" style="margin-top:6px">
           Tip: AMP export is often <span class="mono">wide</span> (variables in rows, <span class="mono">Trace 1..N</span> in columns). This tool expects that.
         </div>
-      </div>
-
-      <div class="control">
-        <label>Anomaly threshold: <span class="mono" id="thVal">2.50</span></label>
-        <input id="th" type="range" min="0.5" max="5.0" step="0.05" value="2.5">
-        <div class="tog"><input id="onlyAnom" type="checkbox"><label for="onlyAnom">Only anomalies</label></div>
-        <div class="tog"><input id="onlyActionable" type="checkbox"><label for="onlyActionable" title="Shows Score ≥ threshold OR Flyer OR Excluded">Only actionable</label></div>
-      
-      <div class="control">
-        <label>Peak Force ES limit (lb): <span class="mono" id="esVal">20</span></label>
-        <input id="es" type="range" min="5" max="50" step="1" value="20">
-        <div class="tog"><input id="esAuto" type="checkbox" checked=""><label for="esAuto">Auto-exclude ES extremes (top/bottom) when limit exceeded</label></div>
-        <div class="hint" style="margin-top:6px">
+</div><div class="control"><label>Preset</label><select id="presetSel"><option value="default">Default</option><option value="strict">Strict (fewer flags)</option><option value="sensitive">Sensitive (more flags)</option></select><div class="hint" style="margin-top:6px">Presets adjust threshold + filtering defaults. You can still fine-tune anything below.</div></div>
+<div class="control">
+<label>Anomaly threshold: <span class="mono" id="thVal">2.50</span></label>
+<input id="th" max="5.0" min="0.5" step="0.05" type="range" value="2.5"/>
+<div class="tog"><input id="onlyAnom" type="checkbox"/><label for="onlyAnom">Only anomalies</label></div>
+<div class="tog"><input id="onlyActionable" type="checkbox"/><label for="onlyActionable" title="Shows Score ≥ threshold OR Flyer OR Excluded">Only actionable</label></div>
+<details class="advDetails" id="advDetails" style="margin-top:12px"><summary class="hint">Advanced controls (click)</summary><div class="advBody" style="margin-top:10px"><div class="control">
+<label>Peak Force ES limit (lb): <span class="mono" id="esVal">20</span></label>
+<input id="es" max="50" min="5" step="1" type="range" value="20"/>
+<div class="tog"><input checked="" id="esAuto" type="checkbox"/><label for="esAuto">Auto-exclude ES extremes (top/bottom) when limit exceeded</label></div>
+<div class="hint" style="margin-top:6px">
           ES here is <span class="mono">max(peak)-min(peak)</span> for the session. If it exceeds the limit, the max and min traces are marked <span class="mono">Excluded</span> but remain visible for learning.
         </div>
-      </div>
-
-      <div class="control">
-        <div class="tog"><input id="hideEx" type="checkbox"><label for="hideEx">Hide excluded rounds</label></div>
-      </div>
+</div><div class="control">
+<div class="tog"><input id="hideEx" type="checkbox"/><label for="hideEx">Hide excluded rounds</label></div>
+</div><div class="row" id="quickChips" style="gap:8px; flex-wrap:wrap; margin-top:10px"><button class="chipBtn small off" id="chipActionable" title="Score ≥ threshold OR Flyer OR Excluded" type="button">Actionable</button><button class="chipBtn small off" id="chipAnom" title="Score ≥ threshold" type="button">Anomalies</button><button class="chipBtn small off" id="chipFlyers" title="Only traces flagged as mechanical outliers" type="button">Flyers</button><button class="chipBtn small off" id="chipHideEx" title="Hide traces excluded by ES rule (or manual)" type="button">Hide excluded</button></div></div></details>
 </div>
-
-      <div class="control">
-        <label>Search</label>
-        <input id="q" type="text" placeholder="trace, driver, cause…">
-      </div>
-
-      <div class="control">
-        <div class="split">
-          <div>
-            <label>Sort</label>
-            <select id="sortSel">
-              <option value="custom">Custom (header click)</option>
-              <option value="score_desc">Score (high → low)</option>
-              <option value="score_asc">Score (low → high)</option>
-              <option value="trace_asc">Trace (asc)</option>
-              <option value="trace_desc">Trace (desc)</option>
-              <option value="peak_desc">Peak Force (high → low)</option>
-              <option value="work_desc">Work Done (high → low)</option>
-              <option value="rough_desc">Roughness (high → low)</option>
-            </select>
-          </div>
-          <div>
-            <label>Baseline</label>
-            <select id="baseSel">
-              <option value="none">No baseline</option>
-              <option value="active">Active session</option>
-              <option value="custom">Saved baseline</option>
-            </select>
-            <div class="row" style="margin-top:8px">
-              <button class="btn secondary" id="btnSaveBase" title="Save the active session medians as baseline">Save baseline</button>
-              <button class="btn secondary" id="btnClrBase" title="Clear saved baseline">Clear</button>
-            </div>
-          </div>
-        </div>
-        <div class="hint" style="margin-top:8px">
+<div class="control">
+<label>Search</label>
+<input id="q" placeholder="trace, driver, cause…" type="text"/>
+</div>
+<div class="control">
+<div class="split">
+<div>
+<label>Sort</label>
+<select id="sortSel">
+<option value="custom">Custom (header click)</option>
+<option value="score_desc">Score (high → low)</option>
+<option value="score_asc">Score (low → high)</option>
+<option value="trace_asc">Trace (asc)</option>
+<option value="trace_desc">Trace (desc)</option>
+<option value="peak_desc">Peak Force (high → low)</option>
+<option value="work_desc">Work Done (high → low)</option>
+<option value="rough_desc">Roughness (high → low)</option>
+</select>
+</div>
+<div>
+<label>Baseline</label>
+<select id="baseSel">
+<option value="none">No baseline</option>
+<option value="active">Active session</option>
+<option value="custom">Saved baseline</option>
+</select>
+<div class="row" style="margin-top:8px">
+<button class="btn secondary" id="btnSaveBase" title="Save the active session medians as baseline">Save baseline</button>
+<button class="btn secondary" id="btnClrBase" title="Clear saved baseline">Clear</button>
+</div>
+</div>
+</div>
+<div class="hint" style="margin-top:8px">
           Baseline enables “Steeper slope overall” style detection by comparing session medians to your baseline.
         </div>
-      </div>
-
-      <div class="control">
-        <div class="kv">
-          <div>Rounds</div><div class="mono" id="kN">—</div>
-          <div>Anomalies (≥ threshold)</div><div class="mono" id="kA">—</div>
-          <div>Peak Force median</div><div class="mono" id="kPF">—</div>
-          <div>Curve data</div><div class="mono" id="kCurve">—</div>
-        </div>
-      </div>
-
-      <div class="control">
-        <div class="badges">
-          <span class="badge"><span class="dot good"></span> Normal</span>
-          <span class="badge"><span class="dot mid"></span> Moderate</span>
-          <span class="badge"><span class="dot warn"></span> High</span>
-          <span class="badge"><span class="dot bad"></span> Flyer</span>
-        </div>
-      </div>
-
-      <div class="control" style="margin-top:12px">
-        <details>
-          <summary class="hint">What diagnostics mean (click)</summary>
-          <div class="hint" style="margin-top:8px">
-            <div><b>Early Spike</b>: unusually high force early in the seating stroke → often chamfer/case mouth/donut.</div>
-            <div><b>Jagged</b>: high “roughness” (curve jitter) → carbon/corrosion/neck-wall inconsistency.</div>
-            <div><b>End Flat/Drop</b>: unusually flat or dropping end segment → bearing-surface transition; if inconsistent, investigate setup/components.</div>
-            <div><b>Force Outlier</b>: Peak/Work/Terminal unusually high/low → neck tension / sizing / anneal variance.</div>
-          </div>
-        </details>
-      </div>
-
-      <div class="warnBox" style="display:none" id="injWarn">
-        <b>Heads up:</b> Your browser appears to have a script/extension injecting ad/redirect code into pages.
-        This tool runs offline and does not load remote URLs. If you see network calls to random domains, try Incognito or remove the extension.
-      </div>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>Rounds</h2>
-    <div class="sessionBar">
-      <div class="sessionPill" style="flex:1">
-        <span class="chip">Session</span>
-        <span class="label" id="sessLabel" title="—">—</span>
-        <span class="meta" id="sessMeta">—</span>
-      </div>
-      <div class="viewTabs" style="margin-left:auto">
-        <button class="tabbtn active" id="tabRounds" type="button">Rounds</button>
-        <button class="tabbtn" id="tabSessions" type="button">Sessions</button>
-      </div>
-      <span class="chip" id="curveChip">Curve: —</span>
-      <span class="chip" id="baseChip">Baseline: none</span>
-      <span class="chip" id="showChip">Shown: —</span>
-      <span class="chip" id="filterChip" style="display:none">Filters: —</span>
-    </div>
-
-    <div id="empty" class="warnBox" style="display: block;">
+</div>
+<div class="control">
+<div class="kv">
+<div>Rounds</div><div class="mono" id="kN">—</div>
+<div>Anomalies (≥ threshold)</div><div class="mono" id="kA">—</div>
+<div>Flyers</div><div class="mono" id="kF">—</div>
+</div>
+</div>
+<div class="control">
+<div class="badges">
+<span class="badge"><span class="dot good"></span> Normal</span>
+<span class="badge"><span class="dot mid"></span> Moderate</span>
+<span class="badge"><span class="dot warn"></span> High</span>
+<span class="badge"><span class="dot bad"></span> Flyer</span>
+</div>
+</div>
+<div class="control" style="margin-top:12px">
+</div>
+</div>
+</section>
+<section class="card">
+<h2>Rounds</h2>
+<div class="sessionBar">
+<div class="sessionPill" style="flex:1">
+<span class="chip">Session</span>
+<span class="label" id="sessLabel" title="—">—</span>
+<span class="meta" id="sessMeta">—</span>
+</div>
+<div class="viewTabs" style="margin-left:auto">
+<button class="tabbtn active" id="tabRounds" type="button">Rounds</button>
+<button class="tabbtn" id="tabSessions" type="button">Sessions</button>
+</div>
+<span class="chip" id="baseChip">Baseline: none</span>
+<span class="chip" id="showChip">Shown: —</span>
+<span class="chip" id="filterChip" style="display:none">Filters: —</span>
+</div>
+<div class="warnBox" id="empty" style="display: block;">
       Upload one or more AMP CSV files to see a scored table here.
       <div class="hint">If your AMP export layout is different, paste a few header lines and I’ll adapt the parser.</div>
-    </div>
-
-    <div class="tableWrap" id="tableWrap" style="display:none">
-
-      <div class="card" id="traceChartCard" style="margin-bottom:12px">
-        <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
-          <div>
-            <div class="kTitle">Trace chart</div>
-            <div class="hint">Peak Force by trace index. Highlights: <span class="mono">Flyer</span>, <span class="mono">Top5</span>/<span class="mono">Bottom5</span>, and <span class="mono">Excluded</span>.</div>
-          </div>
-          <div class="row" style="gap:10px; flex-wrap:wrap; justify-content:flex-end">
-            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcOverlayWork"> Overlay Work Done</label>
-            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcUseFiltered"> Use filtered view</label>
-            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcShowExcluded" checked=""> Show excluded</label>
-          </div>
-        </div>
-        <div class="card" style="margin-top:10px; padding:10px; background:rgba(0,0,0,.12)">
-          <canvas id="traceChart" width="900" height="240" style="width:100%; height:240px"></canvas>
-          <div class="hint" style="margin-top:6px">Tip: click column headers to sort; chart updates for the active session.</div>
-        </div>
-      </div>
-
-      <div class="card" id="inspectorWrap" style="margin-top:10px; padding:10px; background:rgba(0,0,0,.12); display:none">
-        <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
-            <strong id="insTitle">Selected trace</strong>
-            <span class="badge" id="insBucket" title="Bucket classification for this trace"></span>
-          </div>
-          <div class="row" style="gap:8px; flex-wrap:wrap">
-            <button class="btn secondary" id="btnInsPrev" type="button" title="Select previous shown row">Prev</button>
-            <button class="btn secondary" id="btnInsNext" type="button" title="Select next shown row">Next</button>
-            <button class="btn secondary" id="btnInsClear" type="button">Clear</button>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1.15fr 0.85fr; gap:12px; margin-top:10px">
-          <div>
-            <div class="small"><span class="muted">Score</span> <span class="mono" id="insScore">—</span> <span class="muted">•</span> <span class="muted">Driver</span> <span id="insDriver">—</span></div>
-            <div class="small" style="margin-top:6px"><span class="muted">Cause</span> <span id="insCause">—</span></div>
-            <div class="small" style="margin-top:6px"><span class="muted">Why</span> <span id="insWhy">—</span></div>
-            <div class="small" style="margin-top:6px"><span class="muted">Values</span> <span class="mono" id="insVals">—</span></div>
-          </div>
-
-          <div>
-            <label class="tog" style="display:flex; align-items:center; gap:8px">
-              <input id="insUserExcluded" type="checkbox">
-              <span>Manually excluded</span>
-            </label>
-            <div class="small muted" id="insExcludedWhy" style="margin-top:6px">—</div>
-
-            <div class="row" style="gap:8px; margin-top:10px; align-items:center">
-              <input id="insTag" type="text" placeholder="Add a note tag (saved in JSON export)" style="flex:1; min-width:160px">
-              <button class="btn secondary" id="btnInsTagSave" type="button">Save</button>
-              <button class="btn secondary" id="btnInsTagClear" type="button">Clear</button>
-            </div>
-            <div class="small" style="margin-top:8px"><span class="muted">Tags</span> <span id="insTags">—</span></div>
-          </div>
-        </div>
-
-        <div class="small" style="margin-top:12px"><strong>Z breakdown</strong> <span class="muted">(standard deviations)</span></div>
-        <div class="small mono" id="insZ" style="margin-top:6px; white-space:pre-wrap; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px">—</div>
-      </div>
-
-
-      <table>
-        <thead>
-          <tr>
-            <th title="Click to sort" style="cursor: pointer;">Trace</th>
-            <th title="Click to sort" style="cursor: pointer;">Flyer</th>
-            <th title="Click to sort" style="cursor: pointer;">Excluded</th>
-            <th title="Click to sort" style="cursor: pointer;">Tag</th>
-            <th>Why</th>
-            <th title="Click to sort" style="cursor: pointer;">Cause</th>
-            <th title="Click to sort" style="cursor: pointer;">Conf</th>
-            <th title="Click to sort" style="cursor: pointer;">Score</th>
-            <th>Driver</th>
-            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Peak Force</th>
-            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Work Done</th>
-            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Starting Pos</th>
-            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Terminal Force</th>
-            <th class="nowrap curveCol">Early Spike <span class="infoTip" data-tip="Early spike: compares early curve segment to overall. Higher = more initial spike / snap.">ⓘ</span></th>
-            <th class="nowrap curveCol">Jagged <span class="infoTip" data-tip="Jaggedness (roughness): curve wiggle/variance after smoothing. Higher = noisier/jumpier trace.">ⓘ</span></th>
-            <th class="nowrap curveCol">End Flat <span class="infoTip" data-tip="End flatness: how flat the last segment is. Lower = flatter end (can be unusual if too flat).">ⓘ</span></th>
-            <th class="nowrap curveCol">End Drop <span class="infoTip" data-tip="End drop: slope/decline at the very end. More negative = sharper drop-off near end.">ⓘ</span></th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-    <div class="sessionsWrap" id="sessionsWrap">
-      <div class="row" style="justify-content:space-between; align-items:center; margin:6px 0 10px">
-        <div class="small">Session summary across all loaded files. Click a session row to jump back to its rounds.</div>
-        <button class="btn secondary" id="btnExportSessions" type="button" title="Export session summary CSV">Export sessions (CSV)</button>
-      </div>
-      <div class="card" style="padding:10px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; margin-bottom:12px">
-        <canvas id="sessChart" width="900" height="220" style="width:100%; height:220px"></canvas>
-        <div class="hint" style="margin-top:6px">Two lines: <span class="mono">Peak Med</span> (median Peak Force) and <span class="mono">Peak ES</span>. Each vertex is a loaded session, in session order.</div>
-      </div>
-      
-      <div id="comparePanel" class="card" style="display:none; padding:10px; margin-bottom:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10); border-radius:14px">
-        <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
-          <div>
-            <div style="font-weight:800">Compare sessions</div>
-            <div class="small muted">Select 2+ sessions below to compare key medians and anomaly counts. (Click a session row to jump back to rounds.)</div>
-          </div>
-          <div class="row" style="gap:8px; flex-wrap:wrap">
-            <button class="btn secondary" id="btnCompareClear" type="button">Clear selection</button>
-          </div>
-        </div>
-        <div id="compareBody" style="margin-top:10px"></div>
-      </div>
+</div>
+<div class="tableWrap" id="tableWrap" style="display:none">
+<div class="card" id="traceChartCard" style="margin-bottom:12px">
+<div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+<div>
+<div class="kTitle">Trace chart</div>
+<div class="hint">Peak Force by trace index. Highlights: <span class="mono">Flyer</span>, <span class="mono">Top5</span>/<span class="mono">Bottom5</span>, and <span class="mono">Excluded</span>.</div>
+</div>
+<div class="row" style="gap:10px; flex-wrap:wrap; justify-content:flex-end">
+<label class="row small" style="gap:6px; cursor:pointer"><input id="tcOverlayWork" type="checkbox"/> Overlay Work Done</label>
+<label class="row small" style="gap:6px; cursor:pointer"><input id="tcUseFiltered" type="checkbox"/> Use filtered view</label>
+<label class="row small" style="gap:6px; cursor:pointer"><input checked="" id="tcShowExcluded" type="checkbox"/> Show excluded</label>
+</div>
+</div>
+<div class="card" style="margin-top:10px; padding:10px; background:rgba(0,0,0,.12)">
+<canvas height="240" id="traceChart" style="width:100%; height:240px" width="900"></canvas>
+<div class="hint" style="margin-top:6px">Tip: click column headers to sort; chart updates for the active session.</div>
+</div>
+</div>
+<div class="card" id="inspectorWrap" style="margin-top:10px; padding:10px; background:rgba(0,0,0,.12); display:none">
+<div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+<strong id="insTitle">Selected trace</strong>
+<span class="badge" id="insBucket" title="Bucket classification for this trace"></span>
+</div>
+<div class="row" style="gap:8px; flex-wrap:wrap">
+<button class="btn secondary" id="btnInsPrev" title="Select previous shown row" type="button">Prev</button>
+<button class="btn secondary" id="btnInsNext" title="Select next shown row" type="button">Next</button>
+<button class="btn secondary" id="btnInsClear" type="button">Clear</button>
+</div>
+</div>
+<div style="display:grid; grid-template-columns: 1.15fr 0.85fr; gap:12px; margin-top:10px">
+<div>
+<div class="small"><span class="muted">Score</span> <span class="mono" id="insScore">—</span> <span class="muted">•</span> <span class="muted">Driver</span> <span id="insDriver">—</span></div>
+<div class="small" style="margin-top:6px"><span class="muted">Cause</span> <span id="insCause">—</span></div>
+<div class="small" style="margin-top:6px"><span class="muted">Why</span> <span id="insWhy">—</span></div>
+<div class="small" style="margin-top:6px"><span class="muted">Values</span> <span class="mono" id="insVals">—</span></div>
+</div>
+<div>
+<label class="tog" style="display:flex; align-items:center; gap:8px">
+<input id="insUserExcluded" type="checkbox"/>
+<span>Manually excluded</span>
+</label>
+<div class="small muted" id="insExcludedWhy" style="margin-top:6px">—</div>
+<div class="row" style="gap:8px; margin-top:10px; align-items:center">
+<input id="insTag" placeholder="Add a note tag (saved in JSON export)" style="flex:1; min-width:160px" type="text"/>
+<button class="btn secondary" id="btnInsTagSave" type="button">Save</button>
+<button class="btn secondary" id="btnInsTagClear" type="button">Clear</button>
+</div>
+<div class="small" style="margin-top:8px"><span class="muted">Tags</span> <span id="insTags">—</span></div>
+</div>
+</div>
+<div class="small" style="margin-top:12px"><strong>Z breakdown</strong> <span class="muted">(standard deviations)</span></div>
+<div class="small mono" id="insZ" style="margin-top:6px; white-space:pre-wrap; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px">—</div><div class="hint" id="insAdvice" style="margin-top:10px; padding:10px; border-radius:14px; background:rgba(0,0,0,.14); border:1px solid rgba(255,255,255,.08)">—</div>
+</div>
 <table>
-        <thead>
-          <tr>
-            <th style="width:38px"></th><th>Session</th>
-            <th>Rounds</th>
-            <th>Flyers</th>
-            <th>Anomalies</th>
-            <th>Peak Med</th>
-            <th>Peak ES</th>
-            <th>Work Med</th>
-            <th class="curveCol">Rough Med</th>
-          </tr>
-        </thead>
-        <tbody id="sessionsTbody"></tbody>
-      </table>
-    </div>
-    
-
-
-  </section>
+<thead>
+<tr>
+<th data-col="trace" style="cursor: pointer;" title="Click to sort">Trace</th>
+<th data-col="flyer" style="cursor: pointer;" title="Click to sort">Flyer</th>
+<th data-col="excluded" style="cursor: pointer;" title="Click to sort">Excluded</th>
+<th data-col="tag" style="cursor: pointer;" title="Click to sort">Tag</th>
+<th data-col="why">Why</th>
+<th data-col="cause" style="cursor: pointer;" title="Click to sort">Cause</th>
+<th data-col="conf" style="cursor: pointer;" title="Click to sort">Conf</th>
+<th data-col="score" style="cursor: pointer;" title="Click to sort">Score</th>
+<th data-col="driver">Driver</th>
+<th class="nowrap" data-col="peak" style="cursor: pointer;" title="Click to sort">Peak Force</th>
+<th class="nowrap" data-col="work" style="cursor: pointer;" title="Click to sort">Work Done</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+<div class="sessionsWrap" id="sessionsWrap">
+<div class="row" style="justify-content:space-between; align-items:center; margin:6px 0 10px">
+<div class="small">Session summary across all loaded files. Click a session row to jump back to its rounds.</div>
+<button class="btn secondary" id="btnExportSessions" title="Export session summary CSV" type="button">Export sessions (CSV)</button>
+</div>
+<table>
+<thead>
+<tr>
+<th>Session</th>
+<th>Rounds</th>
+<th>Flyers</th>
+<th>Anomalies</th>
+</tr>
+</thead>
+<tbody id="sessionsTbody"></tbody>
+</table>
+</div>
+</section>
 </main>
-
-<script>
+<div aria-modal="true" class="modalBackdrop" id="colModal" role="dialog"><div class="modalCard"><div class="row" style="justify-content:space-between; align-items:center; gap:10px"><div><strong>Columns</strong><div class="small muted">Choose what shows in the Rounds table (saved locally).</div></div><button class="btn secondary" id="colCloseBtn" type="button">Close</button></div><div class="row" style="gap:8px; flex-wrap:wrap; margin-top:10px"><button class="btn secondary" id="colShowEssentials" title="Show the common “decision” columns" type="button">Essentials</button><button class="btn secondary" id="colShowAll" title="Show every column" type="button">Show all</button></div><div class="modalGrid" style="margin-top:10px"><div><div class="colGroupTitle">Core</div></div><div></div></div><div class="hint" style="margin-top:10px">Tip: you can also click column headers to sort.</div></div></div><script>
 /* ========== small safety nudge (detect injected network calls via global fetch patch check) ========== */
 (function(){
   try{
@@ -709,7 +675,6 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
 const state = {
   sessions: [],
   activeIndex: 0,
-  sessionCompare: new Set(),
   threshold: 2.5,
   esLimit: 20,
   esAutoExclude: true,
@@ -717,6 +682,10 @@ const state = {
   view: 'rounds',
   onlyAnom: false,
   onlyActionable: false,
+  onlyFlyers: false,
+  preset: "default",
+  visibleCols: ["trace", "flyer", "excluded", "why", "cause", "conf", "score", "driver", "peak", "work"],
+  advOpen: false,
   query: "",
   sort: "score_desc",
   baselineMode: "none", // none|active|custom
@@ -734,7 +703,7 @@ const state = {
 
 
 /* ========== settings persistence (Phase 2) ========== */
-const SETTINGS_KEY = 'amp_anomaly_finder_settings_v1';
+const SETTINGS_KEY = 'amp_anomaly_finder_settings_v2';
 const DEFAULTS = Object.freeze({
   threshold: 2.5,
   esLimit: 20,
@@ -744,15 +713,20 @@ const DEFAULTS = Object.freeze({
   onlyActionable: false,
   query: '',
   sort: 'score_desc',
-  baselineMode: 'none'
+  baselineMode: 'none',
+  onlyFlyers: false,
+  preset: "default",
+  visibleCols: ["trace", "flyer", "excluded", "why", "cause", "conf", "score", "driver", "peak", "work"],
+  advOpen: false
+
 });
 
 
-const BUILD_TAG = "v3.3.1 UIUX1-5";
+const BUILD_TAG = "v3.4.3 RELEASE";
 
 function applyBuildTag(){
   try{
-    document.title = "AMP CSV Anomaly + Curve Diagnostics — " + BUILD_TAG;
+    document.title = "AMP CSV Anomaly + Diagnostics — " + BUILD_TAG;
     const pill = document.getElementById('buildTagPill');
     if(pill) pill.textContent = BUILD_TAG;
     const about = document.getElementById('buildTagAbout');
@@ -928,7 +902,11 @@ function saveSettings(){
       onlyActionable: !!state.onlyActionable,
       query: String(state.query||''),
       sort: String(state.sort||DEFAULTS.sort),
-      baselineMode: String(state.baselineMode||DEFAULTS.baselineMode)
+      baselineMode: String(state.baselineMode||DEFAULTS.baselineMode),
+      onlyFlyers: !!state.onlyFlyers,
+      preset: String(state.preset||DEFAULTS.preset),
+      visibleCols: Array.isArray(state.visibleCols)? state.visibleCols : DEFAULTS.visibleCols,
+      advOpen: !!state.advOpen
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(out));
   }catch(e){}
@@ -942,6 +920,10 @@ function applySettingsToStateAndUI(s){
   state.hideExcluded = ('hideExcluded' in s) ? !!s.hideExcluded : DEFAULTS.hideExcluded;
   state.onlyAnom = ('onlyAnom' in s) ? !!s.onlyAnom : DEFAULTS.onlyAnom;
   state.onlyActionable = ('onlyActionable' in s) ? !!s.onlyActionable : DEFAULTS.onlyActionable;
+  state.onlyFlyers = ('onlyFlyers' in s) ? !!s.onlyFlyers : DEFAULTS.onlyFlyers;
+  state.preset = (typeof s.preset === 'string') ? s.preset : DEFAULTS.preset;
+  state.visibleCols = Array.isArray(s.visibleCols) ? s.visibleCols.slice() : (DEFAULTS.visibleCols||[]).slice();
+  state.advOpen = ('advOpen' in s) ? !!s.advOpen : DEFAULTS.advOpen;
   state.query = (typeof s.query === 'string') ? s.query : DEFAULTS.query;
   state.sort = (typeof s.sort === 'string') ? s.sort : DEFAULTS.sort;
   state.baselineMode = (typeof s.baselineMode === 'string') ? s.baselineMode : DEFAULTS.baselineMode;
@@ -972,12 +954,100 @@ function applySettingsToStateAndUI(s){
     const v = (state.baselineMode || 'none');
     els.baseSel.value = (['none','active','custom'].includes(v) ? v : 'none');
   }
+  if(els.presetSel){
+    const v = (state.preset || DEFAULTS.preset || 'default');
+    els.presetSel.value = (['default','strict','sensitive'].includes(v) ? v : 'default');
+  }
+  if(els.advDetails){
+    els.advDetails.open = !!state.advOpen;
+  }
+  syncQuickChips();
+  applyColumnVisibility();
+  syncColumnModalChecks();
+
 }
 
 function resetDefaults(){
   applySettingsToStateAndUI({...DEFAULTS});
   // do NOT clear saved baseline (that has its own buttons)
   saveSettings();
+}
+
+
+
+/* ========== UX helpers ========== */
+const COL_ALL = ["trace","flyer","excluded","tag","why","cause","conf","score","driver","peak","work"];
+const COL_ESSENTIALS = ["trace", "flyer", "excluded", "why", "cause", "conf", "score", "driver", "peak", "work"];
+
+function setChip(btn, on){
+  if(!btn) return;
+  btn.classList.toggle('on', !!on);
+  btn.classList.toggle('off', !on);
+}
+
+function syncQuickChips(){
+  setChip(els.chipActionable, !!state.onlyActionable);
+  setChip(els.chipAnom, !!state.onlyAnom);
+  setChip(els.chipFlyers, !!state.onlyFlyers);
+  setChip(els.chipHideEx, !!state.hideExcluded);
+}
+
+function applyPreset(preset){
+  const p = (preset || 'default');
+  state.preset = p;
+  if(p === 'strict'){
+    state.threshold = 3.2;
+    state.onlyAnom = true;
+    state.onlyActionable = true;
+    state.onlyFlyers = false;
+    state.hideExcluded = true;
+  } else if(p === 'sensitive'){
+    state.threshold = 2.0;
+    state.onlyAnom = true;
+    state.onlyActionable = false;
+    state.onlyFlyers = false;
+    state.hideExcluded = false;
+  } else {
+    // default
+    state.threshold = DEFAULTS.threshold;
+    state.onlyAnom = DEFAULTS.onlyAnom;
+    state.onlyActionable = DEFAULTS.onlyActionable;
+    state.onlyFlyers = DEFAULTS.onlyFlyers;
+    state.hideExcluded = DEFAULTS.hideExcluded;
+  }
+  // keep ES/baseline as-is (users may tune these)
+  applySettingsToStateAndUI(state); // sync UI
+  saveSettings();
+  render();
+}
+
+function applyColumnVisibility(){
+  const vis = Array.isArray(state.visibleCols) ? state.visibleCols : (DEFAULTS.visibleCols||[]);
+  const hide = COL_ALL.filter(k=>!vis.includes(k));
+  const css = hide.map(k=>`th[data-col="${k}"], td[data-col="${k}"]{display:none !important;}`).join("\n");
+  try{
+    const st = els.colHideStyle || document.getElementById('colHideStyle');
+    if(st) st.textContent = css;
+  }catch(e){}
+}
+
+function syncColumnModalChecks(){
+  if(!els.colModal) return;
+  const vis = Array.isArray(state.visibleCols) ? state.visibleCols : (DEFAULTS.visibleCols||[]);
+  els.colModal.querySelectorAll('input[type="checkbox"][data-col]').forEach(cb=>{
+    const k = cb.getAttribute('data-col');
+    cb.checked = vis.includes(k);
+  });
+}
+
+function openColModal(){
+  if(!els.colModal) return;
+  syncColumnModalChecks();
+  els.colModal.classList.add('show');
+}
+function closeColModal(){
+  if(!els.colModal) return;
+  els.colModal.classList.remove('show');
 }
 
 
@@ -996,6 +1066,20 @@ const els = {
   onlyActionable: document.getElementById('onlyActionable'),
   q: document.getElementById('q'),
   sortSel: document.getElementById('sortSel'),
+
+  presetSel: document.getElementById('presetSel'),
+  advDetails: document.getElementById('advDetails'),
+  chipActionable: document.getElementById('chipActionable'),
+  chipAnom: document.getElementById('chipAnom'),
+  chipFlyers: document.getElementById('chipFlyers'),
+  chipHideEx: document.getElementById('chipHideEx'),
+  colChipBtn: document.getElementById('colChipBtn'),
+  colModal: document.getElementById('colModal'),
+  colCloseBtn: document.getElementById('colCloseBtn'),
+  colShowEssentials: document.getElementById('colShowEssentials'),
+  colShowAll: document.getElementById('colShowAll'),
+colHideStyle: document.getElementById('colHideStyle'),
+  insAdvice: document.getElementById('insAdvice'),
   baseSel: document.getElementById('baseSel'),
   btnSaveBase: document.getElementById('btnSaveBase'),
   btnClrBase: document.getElementById('btnClrBase'),
@@ -1020,31 +1104,23 @@ const els = {
   tbody: document.getElementById('tbody'),
   kN: document.getElementById('kN'),
   kA: document.getElementById('kA'),
-  kPF: document.getElementById('kPF'),
-  kCurve: document.getElementById('kCurve'),
-  sessLabel: document.getElementById('sessLabel'),
+  kF: document.getElementById('kF'),
+sessLabel: document.getElementById('sessLabel'),
   sessMeta: document.getElementById('sessMeta'),
   tabRounds: document.getElementById('tabRounds'),
   tabSessions: document.getElementById('tabSessions'),
   sessionsWrap: document.getElementById('sessionsWrap'),
-  comparePanel: document.getElementById('comparePanel'),
-  compareBody: document.getElementById('compareBody'),
-  btnCompareClear: document.getElementById('btnCompareClear'),
-  sessionsTbody: document.getElementById('sessionsTbody'),
+sessionsTbody: document.getElementById('sessionsTbody'),
   btnExportSessions: document.getElementById('btnExportSessions'),
   sessChart: document.getElementById('sessChart'),
   traceChart: document.getElementById('traceChart'),
   tcOverlayWork: document.getElementById('tcOverlayWork'),
   tcUseFiltered: document.getElementById('tcUseFiltered'),
   tcShowExcluded: document.getElementById('tcShowExcluded'),
-  curveChip: document.getElementById('curveChip'),
-  baseChip: document.getElementById('baseChip'),
+baseChip: document.getElementById('baseChip'),
   showChip: document.getElementById('showChip'),
   filterChip: document.getElementById('filterChip'),
-  curveChip2: document.getElementById('curveChip'),
-  injWarn: document.getElementById('injWarn'),
-
-  tabCorr: document.getElementById('tabCorr'),
+tabCorr: document.getElementById('tabCorr'),
   corrWrap: document.getElementById('corrWrap'),
   corrFile: document.getElementById('corrFile'),
   corrJoin: document.getElementById('corrJoin'),
@@ -1601,7 +1677,7 @@ function assignDiagnosticsAndCause(r, hasCurves){
   const t = state.threshold;
 
 
-  // severity tiers for curve diagnostics (for UI glyphs)
+  // severity tiers for Diagnostics (for UI glyphs)
   if(hasCurves){
     r.diagStrength = {
       earlySpike: strengthTier(azEarly),
@@ -1828,52 +1904,24 @@ function renderSessionsView(){
     els.sessionsWrap.style.display='none';
     return;
   }
-    const anyCurves = state.sessions.some(s=>!!s.hasCurves);
-  try{ document.body.classList.toggle("noCurves", !anyCurves); }catch(_e){} 
 const rows = state.sessions.map((s,idx)=>({
     idx,
     name:s.name,
     n:s.summary.n,
     flyers:s.rounds.filter(r=>r.flyer).length,
-    anomalies:s.rounds.filter(r=>r.score>=state.threshold).length,
-    peakMed:s.summary.peakMed,
-    peakES:s.summary.peakES,
-    workMed:s.summary.workMed,
-    roughMed:s.summary.roughMed
+    anomalies:s.rounds.filter(r=>r.score>=state.threshold).length
   }));
 
   // draw chart (median peak + ES)
-  drawSessionChart(rows);
-
-  els.sessionsTbody.innerHTML = rows.map((r,i)=>{
+els.sessionsTbody.innerHTML = rows.map((r,i)=>{
     return `<tr data-idx="${r.idx}">
-      <td class="mono"><input type="checkbox" class="sessCheck" data-idx="${r.idx}" ${state.sessionCompare && state.sessionCompare.has(r.idx) ? "checked" : ""} /></td>
       <td title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</td>
       <td class="mono">${r.n}</td>
       <td class="mono">${r.flyers}</td>
       <td class="mono">${r.anomalies}</td>
-      <td class="mono">${r.peakMed==null?'—':fmt(r.peakMed,2)}</td>
-      <td class="mono">${r.peakES==null?'—':fmt(r.peakES,1)}</td>
-      <td class="mono">${r.workMed==null?'—':fmt(r.workMed,2)}</td>
-      <td class="mono curveCol">${r.roughMed==null?'—':fmt(r.roughMed,4)}</td>
-    </tr>`;
+</tr>`;
   }).join("");
-
-  // checkbox compare wiring
-  Array.from(els.sessionsTbody.querySelectorAll('.sessCheck')).forEach(chk=>{
-    chk.addEventListener('click', (e)=>e.stopPropagation());
-    chk.addEventListener('change', ()=>{
-      const idx = Number(chk.getAttribute('data-idx'));
-      if(!state.sessionCompare) state.sessionCompare = new Set();
-      if(chk.checked) state.sessionCompare.add(idx);
-      else state.sessionCompare.delete(idx);
-      renderComparePanel();
-    });
-  });
-
-  renderComparePanel();
-
-  // click handler
+// click handler
   Array.from(els.sessionsTbody.querySelectorAll('tr')).forEach(tr=>{
     tr.addEventListener('click', ()=>{
       const idx = Number(tr.getAttribute('data-idx'));
@@ -1891,114 +1939,7 @@ const rows = state.sessions.map((s,idx)=>({
   });
 
 
-function renderComparePanel(){
-  const panel = els.comparePanel;
-  const body = els.compareBody;
-  if(!panel || !body) return;
 
-  const sel = state.sessionCompare ? Array.from(state.sessionCompare) : [];
-  const ids = sel.map(n=>Number(n)).filter(n=>Number.isFinite(n) && state.sessions && state.sessions[n]);
-  if(ids.length < 2){
-    panel.style.display = 'none';
-    body.innerHTML = '';
-    return;
-  }
-  panel.style.display = 'block';
-
-  const refId = ids[0];
-  const ref = state.sessions[refId];
-  const refS = ref?.summary || {};
-  function fmtDelta(v, refv, digits){
-    if(v==null || refv==null) return '—';
-    const d = v - refv;
-    const sign = d>0 ? '+' : '';
-    return sign + fmt(d, digits);
-  }
-
-  const rows = ids.map(id=>{
-    const s = state.sessions[id];
-    const sum = s.summary || {};
-    return {
-      id,
-      name: s.name,
-      n: sum.n,
-      flyers: s.rounds.filter(r=>r.flyer).length,
-      anomalies: s.rounds.filter(r=>r.score>=state.threshold).length,
-      peakMed: sum.peakMed,
-      workMed: sum.workMed,
-      roughMed: sum.roughMed,
-      curves: (s.hasCurves ? 'yes' : 'no')
-    };
-  });
-
-  body.innerHTML = `
-    <div style="overflow:auto; border:1px solid rgba(255,255,255,.08); border-radius:12px">
-      <table style="width:100%; border-collapse:collapse">
-        <thead>
-          <tr>
-            <th style="text-align:left; padding:8px 10px">Session</th>
-            <th style="text-align:right; padding:8px 10px">Rounds</th>
-            <th style="text-align:right; padding:8px 10px">Anom</th>
-            <th style="text-align:right; padding:8px 10px">Fly</th>
-            <th style="text-align:right; padding:8px 10px">Peak Med</th>
-            <th style="text-align:right; padding:8px 10px">Δ</th>
-            <th style="text-align:right; padding:8px 10px">Work Med</th>
-            <th style="text-align:right; padding:8px 10px">Δ</th>
-            <th style="text-align:right; padding:8px 10px" class="curveCol">Jagged Med</th>
-            <th style="text-align:right; padding:8px 10px" class="curveCol">Δ</th>
-            <th style="text-align:right; padding:8px 10px">Curves</th>
-            <th style="text-align:right; padding:8px 10px">Baseline</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(r=>{
-            const isRef = (r.id===refId);
-            const refPeak = refS.peakMed;
-            const refWork = refS.workMed;
-            const refRough = refS.roughMed;
-            return `
-            <tr style="border-top:1px solid rgba(255,255,255,.08); ${isRef?'background:rgba(56,189,248,.10)':''}">
-              <td style="padding:8px 10px; font-weight:700">${escapeHtml(r.name)}${isRef?' <span class="chip">ref</span>':''}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${r.n}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${r.anomalies}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${r.flyers}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${r.peakMed==null?'—':fmt(r.peakMed,2)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${isRef?'—':fmtDelta(r.peakMed, refPeak, 2)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${r.workMed==null?'—':fmt(r.workMed,2)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${isRef?'—':fmtDelta(r.workMed, refWork, 2)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono curveCol">${r.roughMed==null?'—':fmt(r.roughMed,4)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono curveCol">${isRef?'—':fmtDelta(r.roughMed, refRough, 4)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${r.curves}</td>
-              <td style="padding:8px 10px; text-align:right">
-                <button class="btn secondary" data-base="${r.id}" type="button" style="padding:6px 10px">Use</button>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>
-    <div class="hint" style="margin-top:8px">
-      Tip: click a session row (below) to jump back to rounds. The <span class="chip">ref</span> session is the first one selected.
-    </div>
-  `;
-
-  // baseline buttons
-  Array.from(body.querySelectorAll('button[data-base]')).forEach(b=>{
-    b.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const idx = Number(b.getAttribute('data-base'));
-      const sess = state.sessions[idx];
-      if(!sess) return;
-      const base = sessionToBaseline(sess);
-      state.baseline = base;
-      state.baselineMode = "custom";
-      if(els.baseSel) els.baseSel.value = "custom";
-      saveBaseline(base);
-      saveSettings();
-      render(); // updates chip + scores
-    });
-  });
-}
 
 }
 
@@ -2146,8 +2087,7 @@ function exportSessionsCSV(){
     if(/[",\n]/.test(s)) s = `"${s.replace(/"/g,'""')}"`;
     return s;
   };
-  const anyCurves = state.sessions.some(s=>!!s.hasCurves);
-  const header = ["Session","Rounds","Flyers","Anomalies","Peak Med","Peak ES","Work Med"].concat(anyCurves ? ["Rough Med"] : []);
+const header = ["Session","Rounds","Flyers","Anomalies","Peak Med","Peak ES","Work Med"].concat(anyCurves ? ["Rough Med"] : []);
   const lines = exportPreambleLines("shown_rounds").concat([header.join(",")]);
   const anyCurves2 = state.sessions.some(s=>!!s.hasCurves);
   for(const s of state.sessions){
@@ -2395,6 +2335,61 @@ function renderInspector(){
   if(!shown){
     els.insZ.textContent = (els.insZ.textContent==="—" ? "" : (els.insZ.textContent+"\n")) + "(note) this trace is currently filtered out of the table";
   }
+  if(els.insAdvice){
+    try{
+      const reasons = [];
+      if(Number.isFinite(r.score) && r.score >= state.threshold) reasons.push(`Score ${fmt(r.score,2)} ≥ threshold ${fmt(state.threshold,2)}`);
+      if(r.flyer) reasons.push("Marked as Flyer (mechanical outlier)");
+      if(r.excluded) reasons.push("Auto-excluded by ES rule (Peak Force ES limit)");
+      if(r.userExcluded) reasons.push("Manually excluded by you");
+      if(r.driver) reasons.push(`Driver: ${escapeHtml(r.driver)}`);
+      if(r.cause && r.cause!=='—') reasons.push(`Cause: ${escapeHtml(r.cause)}`);
+
+      const z = r.z || {};
+      const ds = r.diagStrength || {};
+      const strong = (v)=> (Number.isFinite(v) && v >= 1.3);
+      const earlyStrong = strong(ds.earlySpike) || strong(z.earlySpike);
+      const jagStrong   = strong(ds.jagged)    || strong(z.roughness);
+      const flatStrong  = strong(ds.endFlat)   || strong(z.endFlat);
+      const dropStrong  = strong(ds.endDrop)   || strong(z.endDrop);
+      const pfHi = Number.isFinite(z.peakForce) && z.peakForce >= 1.3;
+      const pfLo = Number.isFinite(z.peakForce) && z.peakForce <= -1.3;
+
+      const checks = [];
+      if(earlyStrong){
+        checks.push("Inspect case mouth chamfer/burrs; look for a donut or neck/junction step.");
+        checks.push("Clean the seating stem and check for carbon at the case mouth / neck.");
+      }
+      if(jagStrong){
+        checks.push("Clean seating die / stem; check for debris or carbon causing ‘gritty’ seating.");
+        checks.push("Check neck-wall thickness / neck tension uniformity (bushing/expander).");
+      }
+      if(flatStrong || dropStrong){
+        checks.push("Check seating alignment (runout) and that the stem matches the bullet ogive.");
+        checks.push("Verify consistent neck tension + anneal; these patterns often show sensitivity near final seating.");
+      }
+      if(pfHi){
+        checks.push("Peak Force high: neck tension may be high/dry — consider light neck lube or bushing/expander tweak.");
+      }
+      if(pfLo){
+        checks.push("Peak Force low: neck tension may be light — verify sizing, expander, and brass springback/anneal.");
+      }
+      if(!checks.length){
+        checks.push("Compare this trace to nearby ‘normal’ traces in the Trace chart; look for one metric that pops.");
+        checks.push("If this repeats across many traces, it’s likely process-related; if isolated, it’s a one-off (debris/burr).");
+      }
+
+      const ul = (arr)=> `<ul style="margin:6px 0 0 18px; padding:0">` + arr.map(x=>`<li style="margin:4px 0">${escapeHtml(String(x))}</li>`).join("") + `</ul>`;
+      els.insAdvice.innerHTML =
+        `<div><strong>Why this got flagged</strong></div>` +
+        (reasons.length ? ul(reasons) : `<div class="small muted" style="margin-top:6px">—</div>`) +
+        `<div style="margin-top:10px"><strong>What to check next</strong></div>` +
+        ul(checks);
+    }catch(e){
+      els.insAdvice.textContent = "—";
+    }
+  }
+
 }
 
 
@@ -2722,10 +2717,9 @@ function render(){
   if(!sess){
     els.empty.style.display="block";
     els.tableWrap.style.display="none";
-    els.kN.textContent="—"; els.kA.textContent="—"; els.kPF.textContent="—"; els.kCurve.textContent="—";
+    els.kN.textContent="—"; els.kA.textContent="—"; if(els.kF) els.kF.textContent="—";
     els.sessLabel.textContent="—"; els.sessLabel.title="—"; els.sessMeta.textContent="—";
-    els.curveChip.textContent="Curve: —";
-    els.baseChip.textContent = `Baseline: ${state.baselineMode}`;
+els.baseChip.textContent = `Baseline: ${state.baselineMode}`;
     els.showChip.textContent = "Shown: —";
     if(els.filterChip){ els.filterChip.style.display="none"; els.filterChip.textContent="Filters: —"; }
     if(els.inspectorWrap) els.inspectorWrap.style.display = "none";
@@ -2738,16 +2732,12 @@ function render(){
   // header label (ellipsis)
   els.sessLabel.textContent = sess.name;
   els.sessLabel.title = sess.name;
-  els.sessMeta.textContent = `${sess.summary.n} rounds • ${sess.summary.anomalies} anomalies • ${sess.summary.flyers||0} flyers • Peak ES ${(sess.summary.peakES==null?'—':fmt(sess.summary.peakES,1))}lb`;
-  els.curveChip.textContent = `Curve: ${sess.hasCurves ? "yes" : "no"}`;
-  try{ document.body.classList.toggle("noCurves", !sess.hasCurves); }catch(_e){}
-  els.baseChip.textContent = `Baseline: ${state.baselineMode === "custom" ? (state.baseline ? "saved" : "none") : state.baselineMode}`;
+  els.sessMeta.textContent = `${sess.summary.n} rounds • ${sess.summary.anomalies} anomalies • ${sess.summary.flyers||0} flyers`;
+els.baseChip.textContent = `Baseline: ${state.baselineMode === "custom" ? (state.baseline ? "saved" : "none") : state.baselineMode}`;
   els.kN.textContent = sess.summary.n;
   els.kA.textContent = sess.rounds.filter(r=>r.score>=state.threshold).length;
-  els.kPF.textContent = (sess.summary.peakMed==null) ? "—" : fmt(sess.summary.peakMed,3);
-  els.kCurve.textContent = sess.hasCurves ? "yes" : "no";
-
-  // sync trace chart controls
+  if(els.kF) els.kF.textContent = (sess.rounds.filter(r=>r.flyer).length);
+// sync trace chart controls
   if(els.tcOverlayWork) els.tcOverlayWork.checked = !!state.traceChart.overlayWork;
   if(els.tcUseFiltered) els.tcUseFiltered.checked = !!state.traceChart.useFiltered;
   if(els.tcShowExcluded) els.tcShowExcluded.checked = !!state.traceChart.showExcluded;
@@ -2757,6 +2747,7 @@ function render(){
   const rows = sess.rounds
     .filter(r=>(!state.onlyAnom || r.score>=state.threshold))
     .filter(r=>(!state.onlyActionable || isActionable(r)))
+    .filter(r=>(!state.onlyFlyers || !!r.flyer))
     .filter(r=>(!state.hideExcluded || !r.excluded))
     .filter(r=>matchesQuery(r, state.query))
     .slice()
@@ -2797,23 +2788,23 @@ function render(){
       return `<span class="badge" title="${escapeHtml(tip)}"><span class="dot ${dot}"></span>${escapeHtml(tg)}</span>`;
     }).join(" ") || "—";
     return `<tr class="${cls} ${r.excluded?'excluded':''} ${(state.selectedTraceIndex===r.traceIndex)?'selected':''}" data-idx="${i}" data-traceindex="${r.traceIndex}">
-      <td class="mono">${escapeHtml(r.trace)}</td>
-      <td><span class="badge" title="Flyer: mechanical outlier vs session baseline (force/position/work)."><span class="dot ${r.flyer?'bad':'good'}"></span>${flyerTxt}</span></td>
-      <td><span class="badge" title="Excluded: removed by ES rule or manual exclusion; still tracked for review/export."><span class="dot ${r.excluded?'warn':'good'}"></span>${exTxt}</span></td>
-      <td>${tagHtml}</td>
-      <td><span title="${escapeAttr(r.whyLine||r.causeExplain||'—')}">${diagBadges(r)}</span></td>
-      <td><span title="${escapeAttr(r.causeExplain||'—')}">${escapeHtml((r.cause && r.cause!=='—') ? r.cause : '—')}</span></td>
-      <td><span class="badge" title="Confidence: how strongly the data supports the Cause label."><span class="dot ${conf==='high'?'bad':conf==='med'?'warn':conf==='low'?'mid':'good'}"></span>${conf}</span></td>
-      <td class="mono">${fmt(r.score,2)}</td>
-      <td>${escapeHtml(r.driver)}</td>
-      <td class="mono">${fmt(r.peakForce,3)}</td>
-      <td class="mono">${fmt(r.workDone,3)}</td>
-      <td class="mono">${fmt(r.startingPos,3)}</td>
-      <td class="mono">${fmt(r.terminalForce,3)}</td>
-      <td class="mono curveCol" title="${escapeAttr(earlyTip)}">${early}</td>
-      <td class="mono curveCol" title="${escapeAttr(roughTip)}">${rough}</td>
-      <td class="mono curveCol" title="${escapeAttr(flatTip)}">${flat}</td>
-      <td class="mono curveCol" title="${escapeAttr(dropTip)}">${drop}</td>
+      <td class="mono" data-col="trace">${escapeHtml(r.trace)}</td>
+      <td data-col="flyer"><span class="badge" title="Flyer: mechanical outlier vs session baseline (force/position/work)."><span class="dot ${r.flyer?'bad':'good'}"></span>${flyerTxt}</span></td>
+      <td data-col="excluded"><span class="badge" title="Excluded: removed by ES rule or manual exclusion; still tracked for review/export."><span class="dot ${r.excluded?'warn':'good'}"></span>${exTxt}</span></td>
+      <td data-col="tag">${tagHtml}</td>
+      <td data-col="why"><span title="${escapeAttr(r.whyLine||r.causeExplain||'—')}">${diagBadges(r)}</span></td>
+      <td data-col="cause"><span title="${escapeAttr(r.causeExplain||'—')}">${escapeHtml((r.cause && r.cause!=='—') ? r.cause : '—')}</span></td>
+      <td data-col="conf"><span class="badge" title="Confidence: how strongly the data supports the Cause label."><span class="dot ${conf==='high'?'bad':conf==='med'?'warn':conf==='low'?'mid':'good'}"></span>${conf}</span></td>
+      <td class="mono" data-col="score">${fmt(r.score,2)}</td>
+      <td data-col="driver">${escapeHtml(r.driver)}</td>
+      <td class="mono" data-col="peak">${fmt(r.peakForce,3)}</td>
+      <td class="mono" data-col="work">${fmt(r.workDone,3)}</td>
+      <td class="mono" data-col="startPos">${fmt(r.startingPos,3)}</td>
+      <td class="mono" data-col="termForce">${fmt(r.terminalForce,3)}</td>
+      <td class="mono curveCol" data-col="earlySpike" title="${escapeAttr(earlyTip)}">${early}</td>
+      <td class="mono curveCol" data-col="jagged" title="${escapeAttr(roughTip)}">${rough}</td>
+      <td class="mono curveCol" data-col="endFlat" title="${escapeAttr(flatTip)}">${flat}</td>
+      <td class="mono curveCol" data-col="endDrop" title="${escapeAttr(dropTip)}">${drop}</td>
     </tr>`;
   }).join("");
 
@@ -2837,36 +2828,38 @@ function csvCell(v){
 function buildShownCSV(){
   const rows = state.shownRows || [];
   if(!rows.length) return "";
-  const includeCurves = !!(getActiveSession() && getActiveSession().hasCurves);
-  const header = ["Session","Trace","Flyer","Excluded","Tag","Bucket","Score","Driver","Why","Cause","Confidence","Peak Force","Work Done","Starting Pos","Terminal Force"]
-    .concat(includeCurves ? ["Early Spike","Jaggedness","End Flat","End Drop"] : []);
-  const lines = exportPreambleLines("sessions_summary").concat([header.join(",")]);
   const sess = getActiveSession();
+  const includeCurves = !!(sess && sess.hasCurves);
+
+  const defs = {
+    trace:      { label:"Trace", val:(r)=>r.trace },
+    flyer:      { label:"Flyer", val:(r)=>(r.flyer ? "Yes" : "No") },
+    excluded:   { label:"Excluded", val:(r)=>((r.excluded||r.userExcluded) ? "Yes" : "No") },
+    tag:        { label:"Tag", val:(r)=> (r.userTag || r.tag || "") },
+    why:        { label:"Why", val:(r)=> (r.whyLine || "") },
+    cause:      { label:"Cause", val:(r)=> (r.causeExplain || r.cause || "") },
+    conf:       { label:"Conf", val:(r)=> confLabel(r.conf) },
+    score:      { label:"Score", val:(r)=> fmt(r.score,2) },
+    driver:     { label:"Driver", val:(r)=> (r.driver || "") },
+    peak:       { label:"Peak Force", val:(r)=> fmt(r.peakForce,3) },
+    work:       { label:"Work Done", val:(r)=> fmt(r.workDone,3) },
+    startPos:   { label:"Starting Pos", val:(r)=> fmt(r.startingPos,3) },
+    termForce:  { label:"Terminal Force", val:(r)=> fmt(r.terminalForce,3) },
+    earlySpike: { label:"Early Spike", val:(r)=> (r.earlySpike==null? "" : r.earlySpike) },
+    jagged:     { label:"Jaggedness", val:(r)=> (r.roughness==null? "" : r.roughness) },
+    endFlat:    { label:"End Flat", val:(r)=> (r.endFlat==null? "" : r.endFlat) },
+    endDrop:    { label:"End Drop", val:(r)=> (r.endDrop==null? "" : r.endDrop) },
+  };
+
+  let cols = Array.isArray(state.visibleCols) ? state.visibleCols.slice() : (COL_ESSENTIALS||[]).slice();
+  if(!includeCurves) cols = cols.filter(k=>!['earlySpike','jagged','endFlat','endDrop'].includes(k));
+
+  const header = ["Session"].concat(cols.map(k=> (defs[k] ? defs[k].label : k)));
+  const lines = exportPreambleLines("shown_rounds").concat([header.map(csvCell).join(",")]);
+
   for(const r of rows){
-    const base = [
-      sess ? sess.name : "",
-      r.trace,
-      r.flyer ? "Yes" : "No",
-      r.excluded ? "Yes" : "No",
-      r.tag || "",
-      clsFromScore(r.score),
-      fmt(r.score,2),
-      r.driver || "",
-      ((r.diags||[]).concat(r.flags||[])).filter((v,i,a)=>a.indexOf(v)===i).join("; "),
-      r.cause || "",
-      confLabel((r.confidence!=null? r.confidence : (r.conf!=null? r.conf : 0))),
-      r.peakForce==null? "" : r.peakForce,
-      r.workDone==null? "" : r.workDone,
-      r.startingPos==null? "" : r.startingPos,
-      r.terminalForce==null? "" : r.terminalForce
-    ];
-    const curvePart = includeCurves ? [
-      r.earlySpike==null? "" : r.earlySpike,
-      r.roughness==null? "" : r.roughness,
-      r.endFlat==null? "" : r.endFlat,
-      r.endDrop==null? "" : r.endDrop
-    ] : [];
-    lines.push(base.concat(curvePart).map(csvCell).join(","));
+    const base = [sess ? sess.name : ""].concat(cols.map(k=> (defs[k] ? defs[k].val(r) : "")));
+    lines.push(base.map(csvCell).join(","));
   }
   return lines.join("\n");
 }
@@ -2951,7 +2944,6 @@ async function loadFiles(fileList){
       perFile.push(sess);
     }catch(e){
       failCount++;
-      console.warn("Parse failed", f.name, e);
       const diag = diagnoseAMP(rows);
       const extra = diag ? `\n\nDetails:\n${diag}` : "";
       alert(`Parse failed for ${f.name}:\n${e.message || e}${extra}`);
@@ -2971,14 +2963,13 @@ async function loadFiles(fileList){
         <div style="padding:10px; border:1px solid rgba(255,255,255,.10); border-radius:14px; margin-top:10px; background:rgba(0,0,0,.14)">
           <div style="font-weight:900">${escapeHtml(s.name||"")}</div>
           <div class="small muted" style="margin-top:4px">
-            Rounds: <span class="mono">${s.rounds.length}</span> · Curves: <span class="mono">${curves}</span>
+            Rounds: <span class="mono">${s.rounds.length}</span> · 
           </div>
           <div class="small" style="margin-top:6px">
             Metrics: ✅ ${scalars.map(x=>'<span class="chip">'+escapeHtml(x)+'</span>').join(' ')}
           </div>
           <div class="small" style="margin-top:6px">
-            Curve diagnostics: ${s.hasCurves ? ("✅ " + curveMetrics.map(x=>'<span class="chip">'+escapeHtml(x)+'</span>').join(' ')) : "<span class='muted'>Not available (AMP CSV export doesn’t include trace-point curves; PNG is visual only)</span>"}
-          </div>
+            Diagnostics: </div>
         </div>`;
     }).join("");
     const next = okN ? `
@@ -2995,6 +2986,16 @@ async function loadFiles(fileList){
   state.activeIndex = state.sessions.length - newSessions.length; // jump to first newly added
   renderSessionOptions();
   render();
+
+  try{
+    // onboarding nudge: move attention to the next “thing to do”
+    if(els.sessionSel) els.sessionSel.focus();
+    const roundsHdr = document.querySelector('section.card h2');
+    // Prefer scroll to Rounds section if it exists
+    const roundsSection = Array.from(document.querySelectorAll('section.card h2')).find(x=>String(x.textContent||'').trim()==='Rounds');
+    if(roundsSection) roundsSection.scrollIntoView({block:'start'});
+  }catch(e){}
+
 }
 
 /* ========== wiring ========== */
@@ -3052,7 +3053,8 @@ els.tabSessions.addEventListener('click', ()=>{
   renderSessionsView();
 });
 els.btnExportSessions.addEventListener('click', exportSessionsCSV);
-if(els.btnCompareClear) els.btnCompareClear.addEventListener('click', ()=>{ state.sessionCompare = new Set(); renderSessionsView(); });
+if(els.btnCompareClear) els.btnCompareClear.addEventListener('click', ()=>{
+renderSessionsView(); });
 
 // Correlation tab removed for now (ShotLedger integration pending).
 // (Code retained but not bound unless the Correlation UI exists.)
@@ -3299,8 +3301,75 @@ if(els.tcUseFiltered) els.tcUseFiltered.addEventListener('change', ()=>{ state.t
 if(els.tcShowExcluded) els.tcShowExcluded.addEventListener('change', ()=>{ state.traceChart.showExcluded = els.tcShowExcluded.checked; renderTraceChart(); });
 
 
-els.onlyAnom.addEventListener('change', ()=>{ state.onlyAnom = els.onlyAnom.checked; saveSettings(); render(); });
-els.onlyActionable.addEventListener('change', ()=>{ state.onlyActionable = els.onlyActionable.checked; saveSettings(); render(); });
+els.onlyAnom.addEventListener('change', ()=>{ state.onlyAnom = els.onlyAnom.checked; syncQuickChips(); saveSettings(); render(); });
+els.onlyActionable.addEventListener('change', ()=>{ state.onlyActionable = els.onlyActionable.checked; syncQuickChips(); saveSettings(); render(); });
+
+// preset + quick chips
+if(els.presetSel){
+  els.presetSel.addEventListener('change', ()=>{
+    applyPreset(els.presetSel.value);
+  });
+}
+
+function toggleFlag(flag){
+  state[flag] = !state[flag];
+  // sync legacy checkboxes (for accessibility / keyboard users)
+  if(flag==='onlyActionable' && els.onlyActionable) els.onlyActionable.checked = !!state.onlyActionable;
+  if(flag==='onlyAnom' && els.onlyAnom) els.onlyAnom.checked = !!state.onlyAnom;
+  if(flag==='onlyFlyers'){ /* no legacy checkbox */ }
+  if(flag==='hideExcluded' && els.hideEx) els.hideEx.checked = !!state.hideExcluded;
+  // changing chips means we’re no longer strictly on a preset
+  if(els.presetSel && state.preset && state.preset!=='default'){
+    // keep the selected preset label, but user has customized; do not auto-switch.
+  }
+  syncQuickChips();
+  saveSettings();
+  render();
+}
+
+if(els.chipActionable) els.chipActionable.addEventListener('click', ()=>toggleFlag('onlyActionable'));
+if(els.chipAnom)       els.chipAnom.addEventListener('click', ()=>toggleFlag('onlyAnom'));
+if(els.chipFlyers)     els.chipFlyers.addEventListener('click', ()=>toggleFlag('onlyFlyers'));
+if(els.chipHideEx)     els.chipHideEx.addEventListener('click', ()=>toggleFlag('hideExcluded'));
+
+if(els.advDetails){
+  els.advDetails.addEventListener('toggle', ()=>{
+    state.advOpen = !!els.advDetails.open;
+    saveSettings();
+  });
+}
+
+// Columns modal
+if(els.colChipBtn) els.colChipBtn.addEventListener('click', ()=>openColModal());
+if(els.colCloseBtn) els.colCloseBtn.addEventListener('click', ()=>closeColModal());
+if(els.colModal){
+  els.colModal.addEventListener('click', (e)=>{
+    if(e.target === els.colModal) closeColModal();
+  });
+  els.colModal.querySelectorAll('input[type="checkbox"][data-col]').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const k = cb.getAttribute('data-col');
+      let vis = Array.isArray(state.visibleCols) ? state.visibleCols.slice() : [];
+      if(cb.checked){
+        if(!vis.includes(k)) vis.push(k);
+      }else{
+        vis = vis.filter(x=>x!==k);
+      }
+      // keep ordering stable like COL_ALL
+      state.visibleCols = COL_ALL.filter(x=>vis.includes(x));
+      applyColumnVisibility();
+      saveSettings();
+    });
+  });
+}
+if(els.colShowEssentials) els.colShowEssentials.addEventListener('click', ()=>{
+  state.visibleCols = COL_ESSENTIALS.slice();
+  applyColumnVisibility(); syncColumnModalChecks(); saveSettings();
+});
+if(els.colShowAll) els.colShowAll.addEventListener('click', ()=>{
+  state.visibleCols = COL_ALL.slice();
+  applyColumnVisibility(); syncColumnModalChecks(); saveSettings();
+});
 els.q.addEventListener('input', ()=>{ state.query = els.q.value.trim(); saveSettings(); render(); });
 els.sortSel.addEventListener('change', ()=>{
   const v = els.sortSel.value;
@@ -3412,8 +3481,7 @@ els.jsonIn && els.jsonIn.addEventListener('change', async (e)=>{
 
 els.btnClear.addEventListener('click', ()=>{
   state.sessions = [];
-  state.sessionCompare = new Set();
-  state._wizardImportedOnce = false;
+state._wizardImportedOnce = false;
   state._wizardExported = false;
   state.lastImportReport = null;
   updateWizardUI();
@@ -3497,326 +3565,8 @@ setupHeaderSort();
 renderDetectSummary();
 render();
 
-// Small hint to show injection warning if console shows the secdomcheck pattern
-(function(){
-  const orig = console.error;
-  console.error = function(...args){
-    try{
-      const s = args.map(a=>String(a)).join(" ");
-      if(s.includes("secdomcheck.online") || s.includes("doubleview.online") || s.includes("topodat.info")){
-        els.injWarn.style.display="block";
-      }
-    }catch(e){}
-    return orig.apply(console, args);
-  };
-})();
-
 // Version stamp (single source of truth)
 applyBuildTag();
 </script>
-
 <div id="floatTip" style="position:fixed; display:none; z-index:50; max-width:360px; background:rgba(8,12,20,.92); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 10px; box-shadow:0 10px 30px rgba(0,0,0,.35); font-size:12px; color:rgba(255,255,255,.92); pointer-events:none"></div>
-
-
-<div id="twc-ssr-ioo-phe" style="position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; z-index: 10000; pointer-events: none;"><template shadowrootmode="open"><div>
-        <style>* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Lato', sans-serif;
-}
-
-button {
-    padding: 0;
-    border: none;
-    font: inherit;
-    color: inherit;
-    background-color: transparent;
-    cursor: pointer;
-}
-
-#shortcut-selected,
-#shortcut-visible {
-    position: absolute;
-    top: 15px;
-    right: 335px;
-}
-
-.tooltip{
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    color: #ffffff;
-    gap: 16px;
-    width: 365px;
-    padding: 25px;
-    background-color: #212121;
-    border-radius: 10px;
-    box-shadow: 0px 0px 20px 0px rgba(185, 185, 185, 0.6);
-    z-index: 1000;
-    pointer-events: auto;
-}
-
-.tooltip__header{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.tooltip__icon{
-    height: 20px;
-    width: 20px;
-}
-
-.tooltip__title{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tooltip__title h3{
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.tooltip__close{
-    padding: 0;
-    margin: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.tooltip__content{
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.tooltip__subtitle{
-    font-size: 14px;
-    font-weight: 400;
-}
-
-.tooltip__stats{
-    font-size: 12px;
-    font-weight: 400;
-}
-
-.tooltip__actions{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-}
-
-.tooltip__settings{
-    border: 1px solid #212121;
-    padding: 6px 0;
-    border-radius: 5px;
-    color: #D5D5D5;
-    font-size: 14px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding-left: 5px;
-}
-
-.tooltip__settings:hover{
-    border: 1px solid #06DFC9;
-    color: #ffffff;
-}
-
-.tooltip__settings:hover img,
-.tooltip__settings-text:hover{
-    filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(7500%) hue-rotate(56deg) brightness(97%) contrast(107%);
-}
-
-.tooltip__confirm{
-    background: #06DFC9;
-    border: 1px solid #06DFC9;
-    padding: 6px 0;
-    border-radius: 5px;
-    color: #212121;
-    width: 100%;
-    font-size: 14px;
-    font-weight: 700;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-}
-
-.tooltip__confirm:hover{
-    border: 1px solid #05AD9C;
-    background: #05AD9C;
-}
-
-.tooltip__confirm:active{
-    background: #05AD9C;
-    color: #ffffff;
-}
-
-.tooltip--arrow-top::before{
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 15px solid transparent;
-    border-right: 15px solid transparent;
-    border-bottom: 15px solid #212121;
-}
-
-.tooltip--arrow-left::before{
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: -10px;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-top: 15px solid transparent;
-    border-bottom: 15px solid transparent;
-    border-right: 15px solid #212121;
-}
-
-.tooltip--arrow-right::after{
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: -10px;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-top: 15px solid transparent;
-    border-bottom: 15px solid transparent;
-    border-left: 15px solid #212121;
-}
-
-.hidden{
-    display: none;
-}</style>
-        
-            <div id="shortcut-selected" class="tooltip tooltip--arrow-top hidden">
-                <div class="tooltip__header">
-                    <div class="tooltip__title">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/badge-emblem.svg" alt="badge-emblem icon" class="tooltip__icon"><img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/selected.svg" alt="selected icon" class="tooltip__icon">
-                        <h3 class="tooltip__title">Alt + Shift + S</h3>
-                    </div>
-                    <button class="tooltip__close">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
-                    </button>
-                </div>
-    
-                <div class="tooltip__content">
-                    <p class="tooltip__subtitle">Shortcut for <strong>Selected Area</strong> screenshot</p>
-                    <p class="tooltip__stats">57% of SimpleSnap users capture with shortcut</p> 
-                </div>
-    
-                
-        <div class="tooltip__actions">
-            <button class="tooltip__settings">
-                <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/settings.svg" alt="settings-icon">
-                <p class="tooltip__settings-text">Settings</p>
-            </button>
-            <button class="tooltip__confirm">Got it</button>
-        </div>
-            </div>
-        
-            <div id="shortcut-visible" class="tooltip tooltip--arrow-top hidden">
-                <div class="tooltip__header">
-                    <div class="tooltip__title">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/badge-emblem.svg" alt="badge-emblem icon" class="tooltip__icon"><img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/viewport-route.svg" alt="viewport-route icon" class="tooltip__icon">
-                        <h3 class="tooltip__title">Alt + Shift + V</h3>
-                    </div>
-                    <button class="tooltip__close">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
-                    </button>
-                </div>
-    
-                <div class="tooltip__content">
-                    <p class="tooltip__subtitle">Shortcut for <strong>Visible Area</strong> screenshot</p>
-                    <p class="tooltip__stats">58% of SimpleSnap users capture with shortcut</p> 
-                </div>
-    
-                
-        <div class="tooltip__actions">
-            <button class="tooltip__settings">
-                <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/settings.svg" alt="settings-icon">
-                <p class="tooltip__settings-text">Settings</p>
-            </button>
-            <button class="tooltip__confirm">Got it</button>
-        </div>
-            </div>
-        
-            <div id="lines" class="tooltip tooltip--arrow-left hidden">
-                <div class="tooltip__header">
-                    <div class="tooltip__title">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/ui.svg" alt="ui icon" class="tooltip__icon">
-                        <h3 class="tooltip__title">Lines and Arrows</h3>
-                    </div>
-                    <button class="tooltip__close">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
-                    </button>
-                </div>
-    
-                <div class="tooltip__content">
-                    <p class="tooltip__subtitle">Draw arrows and lines - straight or freehand, select color and line width here.</p>
-                    <p class="tooltip__stats">Most users start their edits here.</p> 
-                </div>
-    
-                
-            </div>
-        
-            <div id="crop" class="tooltip tooltip--arrow-left hidden">
-                <div class="tooltip__header">
-                    <div class="tooltip__title">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/selected.svg" alt="selected icon" class="tooltip__icon">
-                        <h3 class="tooltip__title">Crop</h3>
-                    </div>
-                    <button class="tooltip__close">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
-                    </button>
-                </div>
-    
-                <div class="tooltip__content">
-                    <p class="tooltip__subtitle">You can trim your screenshot to focus on a specific area — just select the zone you want to keep, and the rest will be cropped out</p>
-                    <p class="tooltip__stats">A useful feature many users overlook.</p> 
-                </div>
-    
-                
-            </div>
-        
-            <div id="undo" class="tooltip tooltip--arrow-right hidden">
-                <div class="tooltip__header">
-                    <div class="tooltip__title">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/undo-arrow.svg" alt="undo-arrow icon" class="tooltip__icon">
-                        <h3 class="tooltip__title">Undo anytime</h3>
-                    </div>
-                    <button class="tooltip__close">
-                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
-                    </button>
-                </div>
-    
-                <div class="tooltip__content">
-                    <p class="tooltip__subtitle">Cancel edits and return to the previous appearance of screenshot.</p>
-                    <p class="tooltip__stats">Right menu allows you to manage history of changes.</p> 
-                </div>
-    
-                
-            </div>
-        
-    </div></template></div><div id="capture-shell-oaxgpa" data-snapoverlay="true" style="display: none;"><template shadowrootmode="open"><style>
-    .captureShadeLayer {
-        position: fixed; top: 0; width: 100%; left: 0; background: rgba(255, 255, 255, 0.22); height: 100%; cursor: crosshair; z-index: 2147483647;
-    }
-    .captureSelectionFrame {
-        cursor: crosshair; z-index: 2147483647; border: 3px dashed #06DFC9; position: fixed; background-color: rgba(38, 37, 37, 0.69);
-    }</style></template></div></body></html>
+</body></html>
