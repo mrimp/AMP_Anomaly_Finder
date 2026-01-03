@@ -1,12 +1,10 @@
 
+<!DOCTYPE html>
+<!-- saved from url=(0043)https://mrimp.github.io/AMP_Anomaly_Finder/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>AMP CSV Anomaly + Curve Diagnostics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMP CSV Anomaly + Curve Diagnostics — v3.3 UIUX1-5</title>
 <style>
     *{box-sizing:border-box}
   body{
@@ -347,8 +345,20 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
   user-select:none;
 }
 
+
+
+/* Curve diagnostics columns (auto-hidden when curve data isn't available) */
+.curveCol{}
+.noCurves .curveCol{ display:none !important; }
+
 </style>
-</head>
+<style>
+            .captureFixedShim { position: absolute !important; }
+            .captureStickyShim { position: static !important; }
+            .captureHeaderShim { position: relative !important; }
+        </style><link href="./AMP CSV Anomaly + Curve Diagnostics — v3.3 UIUX1-5_files/css2" rel="stylesheet"><style id="ar138f7d727d0style">
+				.ar138f7d727d0hidden{ position:absolute !important; opacity:0 !important; pointer-events:none !important}
+			</style></head>
 <body>
 <header class="suiteHeader">
   <div class="suiteHeader__left">
@@ -357,7 +367,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
       <div class="suiteHeader__pill"><span id="buildTagPill">v3.3 UIUX1-5</span></div>
       <div class="suiteHeader__pill suiteHeader__pill--muted">offline</div>
     </div>
-    <div class="suiteHeader__tagline">Upload AMP “Press” CSV exports (wide). Scores anomalies + adds curve diagnostics (early spike, jaggedness, end flat/drop) when curve data exists.</div>
+    <div class="suiteHeader__tagline">Upload AMP “Press” CSV exports. Scores anomalies + explainable causes. Curve diagnostics are hidden unless curve columns are detected (most AMP exports don’t include them).</div>
   </div>
 
   <div class="suiteHeader__right">
@@ -386,7 +396,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
       <button class="btn secondary" id="btnReset" style="display:none" aria-hidden="true">Reset defaults</button>
       <button class="btn secondary" id="btnClear" style="display:none" aria-hidden="true">Clear</button>
 
-      <input id="jsonIn" type="file" accept=".json,application/json" style="display:none" />
+      <input id="jsonIn" type="file" accept=".json,application/json" style="display:none">
 
     </div>
     <div class="suiteHeader__badge suiteHeader__badge--img" title="Target"><img src="data:image/jpeg;base64,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" alt="Target"><span class="suiteHeader__badgeText">AMP</span></div>
@@ -395,7 +405,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
 
 <main>
   <section class="card">
-    <h2>Upload & Controls</h2>
+    <h2>Upload &amp; Controls</h2>
     <div class="body">
       <div id="wizard" class="wizard" style="margin-bottom:10px">
         <div class="wizStep active" data-step="1"><span class="wizDot"></span><span><strong>1</strong> Upload</span></div>
@@ -406,11 +416,11 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
 
       <div class="row">
         <label class="btn" for="fileIn">Choose files</label>
-        <input id="fileIn" type="file" accept=".csv,text/csv" multiple/>
+        <input id="fileIn" type="file" accept=".csv,text/csv" multiple="">
       </div>
 
       <div id="drop" class="drop" style="margin-top:10px">
-        <strong>Drop AMP CSV files here</strong><br/>
+        <strong>Drop AMP CSV files here</strong><br>
         <span class="small">Each file becomes a session. Works offline (no internet needed).</span>
       </div>
       <div id="detectSummary" class="card" style="margin-top:10px; padding:10px; display:none; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius:16px">
@@ -436,27 +446,27 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
 
       <div class="control">
         <label>Anomaly threshold: <span class="mono" id="thVal">2.50</span></label>
-        <input id="th" type="range" min="0.5" max="5.0" step="0.05" value="2.5"/>
-        <div class="tog"><input id="onlyAnom" type="checkbox"/><label for="onlyAnom">Only anomalies</label></div>
-        <div class="tog"><input id="onlyActionable" type="checkbox"/><label for="onlyActionable" title="Shows Score ≥ threshold OR Flyer OR Excluded">Only actionable</label></div>
+        <input id="th" type="range" min="0.5" max="5.0" step="0.05" value="2.5">
+        <div class="tog"><input id="onlyAnom" type="checkbox"><label for="onlyAnom">Only anomalies</label></div>
+        <div class="tog"><input id="onlyActionable" type="checkbox"><label for="onlyActionable" title="Shows Score ≥ threshold OR Flyer OR Excluded">Only actionable</label></div>
       
       <div class="control">
         <label>Peak Force ES limit (lb): <span class="mono" id="esVal">20</span></label>
-        <input id="es" type="range" min="5" max="50" step="1" value="20"/>
-        <div class="tog"><input id="esAuto" type="checkbox" checked/><label for="esAuto">Auto-exclude ES extremes (top/bottom) when limit exceeded</label></div>
+        <input id="es" type="range" min="5" max="50" step="1" value="20">
+        <div class="tog"><input id="esAuto" type="checkbox" checked=""><label for="esAuto">Auto-exclude ES extremes (top/bottom) when limit exceeded</label></div>
         <div class="hint" style="margin-top:6px">
           ES here is <span class="mono">max(peak)-min(peak)</span> for the session. If it exceeds the limit, the max and min traces are marked <span class="mono">Excluded</span> but remain visible for learning.
         </div>
       </div>
 
       <div class="control">
-        <div class="tog"><input id="hideEx" type="checkbox"/><label for="hideEx">Hide excluded rounds</label></div>
+        <div class="tog"><input id="hideEx" type="checkbox"><label for="hideEx">Hide excluded rounds</label></div>
       </div>
 </div>
 
       <div class="control">
         <label>Search</label>
-        <input id="q" type="text" placeholder="trace, driver, cause…"/>
+        <input id="q" type="text" placeholder="trace, driver, cause…">
       </div>
 
       <div class="control">
@@ -547,7 +557,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
       <span class="chip" id="filterChip" style="display:none">Filters: —</span>
     </div>
 
-    <div id="empty" class="warnBox">
+    <div id="empty" class="warnBox" style="display: block;">
       Upload one or more AMP CSV files to see a scored table here.
       <div class="hint">If your AMP export layout is different, paste a few header lines and I’ll adapt the parser.</div>
     </div>
@@ -561,9 +571,9 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
             <div class="hint">Peak Force by trace index. Highlights: <span class="mono">Flyer</span>, <span class="mono">Top5</span>/<span class="mono">Bottom5</span>, and <span class="mono">Excluded</span>.</div>
           </div>
           <div class="row" style="gap:10px; flex-wrap:wrap; justify-content:flex-end">
-            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcOverlayWork"/> Overlay Work Done</label>
-            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcUseFiltered"/> Use filtered view</label>
-            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcShowExcluded" checked/> Show excluded</label>
+            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcOverlayWork"> Overlay Work Done</label>
+            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcUseFiltered"> Use filtered view</label>
+            <label class="row small" style="gap:6px; cursor:pointer"><input type="checkbox" id="tcShowExcluded" checked=""> Show excluded</label>
           </div>
         </div>
         <div class="card" style="margin-top:10px; padding:10px; background:rgba(0,0,0,.12)">
@@ -595,13 +605,13 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
 
           <div>
             <label class="tog" style="display:flex; align-items:center; gap:8px">
-              <input id="insUserExcluded" type="checkbox"/>
+              <input id="insUserExcluded" type="checkbox">
               <span>Manually excluded</span>
             </label>
             <div class="small muted" id="insExcludedWhy" style="margin-top:6px">—</div>
 
             <div class="row" style="gap:8px; margin-top:10px; align-items:center">
-              <input id="insTag" type="text" placeholder="Add a note tag (saved in JSON export)" style="flex:1; min-width:160px"/>
+              <input id="insTag" type="text" placeholder="Add a note tag (saved in JSON export)" style="flex:1; min-width:160px">
               <button class="btn secondary" id="btnInsTagSave" type="button">Save</button>
               <button class="btn secondary" id="btnInsTagClear" type="button">Clear</button>
             </div>
@@ -617,23 +627,23 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
       <table>
         <thead>
           <tr>
-            <th>Trace</th>
-            <th>Flyer</th>
-            <th>Excluded</th>
-            <th>Tag</th>
+            <th title="Click to sort" style="cursor: pointer;">Trace</th>
+            <th title="Click to sort" style="cursor: pointer;">Flyer</th>
+            <th title="Click to sort" style="cursor: pointer;">Excluded</th>
+            <th title="Click to sort" style="cursor: pointer;">Tag</th>
             <th>Why</th>
-            <th>Cause</th>
-            <th>Conf</th>
-            <th>Score</th>
+            <th title="Click to sort" style="cursor: pointer;">Cause</th>
+            <th title="Click to sort" style="cursor: pointer;">Conf</th>
+            <th title="Click to sort" style="cursor: pointer;">Score</th>
             <th>Driver</th>
-            <th class="nowrap">Peak Force</th>
-            <th class="nowrap">Work Done</th>
-            <th class="nowrap">Starting Pos</th>
-            <th class="nowrap">Terminal Force</th>
-            <th class="nowrap">Early Spike <span class="infoTip" data-tip="Early spike: compares early curve segment to overall. Higher = more initial spike / snap.">ⓘ</span></th>
-            <th class="nowrap">Jagged <span class="infoTip" data-tip="Jaggedness (roughness): curve wiggle/variance after smoothing. Higher = noisier/jumpier trace.">ⓘ</span></th>
-            <th class="nowrap">End Flat <span class="infoTip" data-tip="End flatness: how flat the last segment is. Lower = flatter end (can be unusual if too flat).">ⓘ</span></th>
-            <th class="nowrap">End Drop <span class="infoTip" data-tip="End drop: slope/decline at the very end. More negative = sharper drop-off near end.">ⓘ</span></th>
+            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Peak Force</th>
+            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Work Done</th>
+            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Starting Pos</th>
+            <th class="nowrap" title="Click to sort" style="cursor: pointer;">Terminal Force</th>
+            <th class="nowrap curveCol">Early Spike <span class="infoTip" data-tip="Early spike: compares early curve segment to overall. Higher = more initial spike / snap.">ⓘ</span></th>
+            <th class="nowrap curveCol">Jagged <span class="infoTip" data-tip="Jaggedness (roughness): curve wiggle/variance after smoothing. Higher = noisier/jumpier trace.">ⓘ</span></th>
+            <th class="nowrap curveCol">End Flat <span class="infoTip" data-tip="End flatness: how flat the last segment is. Lower = flatter end (can be unusual if too flat).">ⓘ</span></th>
+            <th class="nowrap curveCol">End Drop <span class="infoTip" data-tip="End drop: slope/decline at the very end. More negative = sharper drop-off near end.">ⓘ</span></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -671,7 +681,7 @@ header{padding:0; display:block; gap:0; align-items:unset; justify-content:unset
             <th>Peak Med</th>
             <th>Peak ES</th>
             <th>Work Med</th>
-            <th>Rough Med</th>
+            <th class="curveCol">Rough Med</th>
           </tr>
         </thead>
         <tbody id="sessionsTbody"></tbody>
@@ -738,7 +748,7 @@ const DEFAULTS = Object.freeze({
 });
 
 
-const BUILD_TAG = "v3.3 UIUX1-5";
+const BUILD_TAG = "v3.3.1 UIUX1-5";
 
 function applyBuildTag(){
   try{
@@ -1818,7 +1828,9 @@ function renderSessionsView(){
     els.sessionsWrap.style.display='none';
     return;
   }
-  const rows = state.sessions.map((s,idx)=>({
+    const anyCurves = state.sessions.some(s=>!!s.hasCurves);
+  try{ document.body.classList.toggle("noCurves", !anyCurves); }catch(_e){} 
+const rows = state.sessions.map((s,idx)=>({
     idx,
     name:s.name,
     n:s.summary.n,
@@ -1843,7 +1855,7 @@ function renderSessionsView(){
       <td class="mono">${r.peakMed==null?'—':fmt(r.peakMed,2)}</td>
       <td class="mono">${r.peakES==null?'—':fmt(r.peakES,1)}</td>
       <td class="mono">${r.workMed==null?'—':fmt(r.workMed,2)}</td>
-      <td class="mono">${r.roughMed==null?'—':fmt(r.roughMed,4)}</td>
+      <td class="mono curveCol">${r.roughMed==null?'—':fmt(r.roughMed,4)}</td>
     </tr>`;
   }).join("");
 
@@ -1932,8 +1944,8 @@ function renderComparePanel(){
             <th style="text-align:right; padding:8px 10px">Δ</th>
             <th style="text-align:right; padding:8px 10px">Work Med</th>
             <th style="text-align:right; padding:8px 10px">Δ</th>
-            <th style="text-align:right; padding:8px 10px">Jagged Med</th>
-            <th style="text-align:right; padding:8px 10px">Δ</th>
+            <th style="text-align:right; padding:8px 10px" class="curveCol">Jagged Med</th>
+            <th style="text-align:right; padding:8px 10px" class="curveCol">Δ</th>
             <th style="text-align:right; padding:8px 10px">Curves</th>
             <th style="text-align:right; padding:8px 10px">Baseline</th>
           </tr>
@@ -1954,8 +1966,8 @@ function renderComparePanel(){
               <td style="padding:8px 10px; text-align:right" class="mono">${isRef?'—':fmtDelta(r.peakMed, refPeak, 2)}</td>
               <td style="padding:8px 10px; text-align:right" class="mono">${r.workMed==null?'—':fmt(r.workMed,2)}</td>
               <td style="padding:8px 10px; text-align:right" class="mono">${isRef?'—':fmtDelta(r.workMed, refWork, 2)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${r.roughMed==null?'—':fmt(r.roughMed,4)}</td>
-              <td style="padding:8px 10px; text-align:right" class="mono">${isRef?'—':fmtDelta(r.roughMed, refRough, 4)}</td>
+              <td style="padding:8px 10px; text-align:right" class="mono curveCol">${r.roughMed==null?'—':fmt(r.roughMed,4)}</td>
+              <td style="padding:8px 10px; text-align:right" class="mono curveCol">${isRef?'—':fmtDelta(r.roughMed, refRough, 4)}</td>
               <td style="padding:8px 10px; text-align:right" class="mono">${r.curves}</td>
               <td style="padding:8px 10px; text-align:right">
                 <button class="btn secondary" data-base="${r.id}" type="button" style="padding:6px 10px">Use</button>
@@ -2134,19 +2146,22 @@ function exportSessionsCSV(){
     if(/[",\n]/.test(s)) s = `"${s.replace(/"/g,'""')}"`;
     return s;
   };
-  const header = ["Session","Rounds","Flyers","Anomalies","Peak Med","Peak ES","Work Med","Rough Med"];
+  const anyCurves = state.sessions.some(s=>!!s.hasCurves);
+  const header = ["Session","Rounds","Flyers","Anomalies","Peak Med","Peak ES","Work Med"].concat(anyCurves ? ["Rough Med"] : []);
   const lines = exportPreambleLines("shown_rounds").concat([header.join(",")]);
+  const anyCurves2 = state.sessions.some(s=>!!s.hasCurves);
   for(const s of state.sessions){
-    const row = [
+    const base = [
       s.name,
       s.summary.n,
       s.rounds.filter(r=>r.flyer).length,
       s.rounds.filter(r=>r.score>=state.threshold).length,
       s.summary.peakMed==null? "": s.summary.peakMed,
       s.summary.peakES==null? "": s.summary.peakES,
-      s.summary.workMed==null? "": s.summary.workMed,
-      s.summary.roughMed==null? "": s.summary.roughMed
-    ].map(csvCellLocal).join(",");
+      s.summary.workMed==null? "": s.summary.workMed
+    ];
+    const extra = anyCurves2 ? [ (s.summary.roughMed==null? "": s.summary.roughMed) ] : [];
+    const row = base.concat(extra).map(csvCellLocal).join(",");
     lines.push(row);
   }
   const blob = new Blob([lines.join("\n")], {type:"text/csv"});
@@ -2725,6 +2740,7 @@ function render(){
   els.sessLabel.title = sess.name;
   els.sessMeta.textContent = `${sess.summary.n} rounds • ${sess.summary.anomalies} anomalies • ${sess.summary.flyers||0} flyers • Peak ES ${(sess.summary.peakES==null?'—':fmt(sess.summary.peakES,1))}lb`;
   els.curveChip.textContent = `Curve: ${sess.hasCurves ? "yes" : "no"}`;
+  try{ document.body.classList.toggle("noCurves", !sess.hasCurves); }catch(_e){}
   els.baseChip.textContent = `Baseline: ${state.baselineMode === "custom" ? (state.baseline ? "saved" : "none") : state.baselineMode}`;
   els.kN.textContent = sess.summary.n;
   els.kA.textContent = sess.rounds.filter(r=>r.score>=state.threshold).length;
@@ -2786,7 +2802,7 @@ function render(){
       <td><span class="badge" title="Excluded: removed by ES rule or manual exclusion; still tracked for review/export."><span class="dot ${r.excluded?'warn':'good'}"></span>${exTxt}</span></td>
       <td>${tagHtml}</td>
       <td><span title="${escapeAttr(r.whyLine||r.causeExplain||'—')}">${diagBadges(r)}</span></td>
-      <td><span title="${escapeAttr(r.causeExplain||'—')}">${escapeHtml((r.cause && r.cause!=='—') ? r.cause : (r.noCurveData ? '— (no curve data)' : '—'))}</span></td>
+      <td><span title="${escapeAttr(r.causeExplain||'—')}">${escapeHtml((r.cause && r.cause!=='—') ? r.cause : '—')}</span></td>
       <td><span class="badge" title="Confidence: how strongly the data supports the Cause label."><span class="dot ${conf==='high'?'bad':conf==='med'?'warn':conf==='low'?'mid':'good'}"></span>${conf}</span></td>
       <td class="mono">${fmt(r.score,2)}</td>
       <td>${escapeHtml(r.driver)}</td>
@@ -2794,10 +2810,10 @@ function render(){
       <td class="mono">${fmt(r.workDone,3)}</td>
       <td class="mono">${fmt(r.startingPos,3)}</td>
       <td class="mono">${fmt(r.terminalForce,3)}</td>
-      <td class="mono" title="${escapeAttr(earlyTip)}">${early}</td>
-      <td class="mono" title="${escapeAttr(roughTip)}">${rough}</td>
-      <td class="mono" title="${escapeAttr(flatTip)}">${flat}</td>
-      <td class="mono" title="${escapeAttr(dropTip)}">${drop}</td>
+      <td class="mono curveCol" title="${escapeAttr(earlyTip)}">${early}</td>
+      <td class="mono curveCol" title="${escapeAttr(roughTip)}">${rough}</td>
+      <td class="mono curveCol" title="${escapeAttr(flatTip)}">${flat}</td>
+      <td class="mono curveCol" title="${escapeAttr(dropTip)}">${drop}</td>
     </tr>`;
   }).join("");
 
@@ -2821,12 +2837,13 @@ function csvCell(v){
 function buildShownCSV(){
   const rows = state.shownRows || [];
   if(!rows.length) return "";
-  const header = ["Session","Trace","Flyer","Excluded","Tag","Bucket","Score","Driver","Why","Cause","Confidence",
-    "Peak Force","Work Done","Starting Pos","Terminal Force","Early Spike","Jaggedness","End Flat","End Drop"];
+  const includeCurves = !!(getActiveSession() && getActiveSession().hasCurves);
+  const header = ["Session","Trace","Flyer","Excluded","Tag","Bucket","Score","Driver","Why","Cause","Confidence","Peak Force","Work Done","Starting Pos","Terminal Force"]
+    .concat(includeCurves ? ["Early Spike","Jaggedness","End Flat","End Drop"] : []);
   const lines = exportPreambleLines("sessions_summary").concat([header.join(",")]);
   const sess = getActiveSession();
   for(const r of rows){
-    lines.push([
+    const base = [
       sess ? sess.name : "",
       r.trace,
       r.flyer ? "Yes" : "No",
@@ -2841,12 +2858,15 @@ function buildShownCSV(){
       r.peakForce==null? "" : r.peakForce,
       r.workDone==null? "" : r.workDone,
       r.startingPos==null? "" : r.startingPos,
-      r.terminalForce==null? "" : r.terminalForce,
+      r.terminalForce==null? "" : r.terminalForce
+    ];
+    const curvePart = includeCurves ? [
       r.earlySpike==null? "" : r.earlySpike,
       r.roughness==null? "" : r.roughness,
       r.endFlat==null? "" : r.endFlat,
       r.endDrop==null? "" : r.endDrop
-    ].map(csvCell).join(","));
+    ] : [];
+    lines.push(base.concat(curvePart).map(csvCell).join(","));
   }
   return lines.join("\n");
 }
@@ -2957,7 +2977,7 @@ async function loadFiles(fileList){
             Metrics: ✅ ${scalars.map(x=>'<span class="chip">'+escapeHtml(x)+'</span>').join(' ')}
           </div>
           <div class="small" style="margin-top:6px">
-            Curve diagnostics: ${s.hasCurves ? ("✅ " + curveMetrics.map(x=>'<span class="chip">'+escapeHtml(x)+'</span>').join(' ')) : "<span class='muted'>— (no curve block detected)</span>"}
+            Curve diagnostics: ${s.hasCurves ? ("✅ " + curveMetrics.map(x=>'<span class="chip">'+escapeHtml(x)+'</span>').join(' ')) : "<span class='muted'>Not available (AMP CSV export doesn’t include trace-point curves; PNG is visual only)</span>"}
           </div>
         </div>`;
     }).join("");
@@ -3496,5 +3516,307 @@ applyBuildTag();
 </script>
 
 <div id="floatTip" style="position:fixed; display:none; z-index:50; max-width:360px; background:rgba(8,12,20,.92); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 10px; box-shadow:0 10px 30px rgba(0,0,0,.35); font-size:12px; color:rgba(255,255,255,.92); pointer-events:none"></div>
-</body>
-</html>
+
+
+<div id="twc-ssr-ioo-phe" style="position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; z-index: 10000; pointer-events: none;"><template shadowrootmode="open"><div>
+        <style>* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Lato', sans-serif;
+}
+
+button {
+    padding: 0;
+    border: none;
+    font: inherit;
+    color: inherit;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+#shortcut-selected,
+#shortcut-visible {
+    position: absolute;
+    top: 15px;
+    right: 335px;
+}
+
+.tooltip{
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    color: #ffffff;
+    gap: 16px;
+    width: 365px;
+    padding: 25px;
+    background-color: #212121;
+    border-radius: 10px;
+    box-shadow: 0px 0px 20px 0px rgba(185, 185, 185, 0.6);
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.tooltip__header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tooltip__icon{
+    height: 20px;
+    width: 20px;
+}
+
+.tooltip__title{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tooltip__title h3{
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.tooltip__close{
+    padding: 0;
+    margin: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tooltip__content{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.tooltip__subtitle{
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.tooltip__stats{
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.tooltip__actions{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.tooltip__settings{
+    border: 1px solid #212121;
+    padding: 6px 0;
+    border-radius: 5px;
+    color: #D5D5D5;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding-left: 5px;
+}
+
+.tooltip__settings:hover{
+    border: 1px solid #06DFC9;
+    color: #ffffff;
+}
+
+.tooltip__settings:hover img,
+.tooltip__settings-text:hover{
+    filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(7500%) hue-rotate(56deg) brightness(97%) contrast(107%);
+}
+
+.tooltip__confirm{
+    background: #06DFC9;
+    border: 1px solid #06DFC9;
+    padding: 6px 0;
+    border-radius: 5px;
+    color: #212121;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.tooltip__confirm:hover{
+    border: 1px solid #05AD9C;
+    background: #05AD9C;
+}
+
+.tooltip__confirm:active{
+    background: #05AD9C;
+    color: #ffffff;
+}
+
+.tooltip--arrow-top::before{
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 15px solid #212121;
+}
+
+.tooltip--arrow-left::before{
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -10px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 15px solid transparent;
+    border-bottom: 15px solid transparent;
+    border-right: 15px solid #212121;
+}
+
+.tooltip--arrow-right::after{
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -10px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 15px solid transparent;
+    border-bottom: 15px solid transparent;
+    border-left: 15px solid #212121;
+}
+
+.hidden{
+    display: none;
+}</style>
+        
+            <div id="shortcut-selected" class="tooltip tooltip--arrow-top hidden">
+                <div class="tooltip__header">
+                    <div class="tooltip__title">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/badge-emblem.svg" alt="badge-emblem icon" class="tooltip__icon"><img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/selected.svg" alt="selected icon" class="tooltip__icon">
+                        <h3 class="tooltip__title">Alt + Shift + S</h3>
+                    </div>
+                    <button class="tooltip__close">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
+                    </button>
+                </div>
+    
+                <div class="tooltip__content">
+                    <p class="tooltip__subtitle">Shortcut for <strong>Selected Area</strong> screenshot</p>
+                    <p class="tooltip__stats">57% of SimpleSnap users capture with shortcut</p> 
+                </div>
+    
+                
+        <div class="tooltip__actions">
+            <button class="tooltip__settings">
+                <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/settings.svg" alt="settings-icon">
+                <p class="tooltip__settings-text">Settings</p>
+            </button>
+            <button class="tooltip__confirm">Got it</button>
+        </div>
+            </div>
+        
+            <div id="shortcut-visible" class="tooltip tooltip--arrow-top hidden">
+                <div class="tooltip__header">
+                    <div class="tooltip__title">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/badge-emblem.svg" alt="badge-emblem icon" class="tooltip__icon"><img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/viewport-route.svg" alt="viewport-route icon" class="tooltip__icon">
+                        <h3 class="tooltip__title">Alt + Shift + V</h3>
+                    </div>
+                    <button class="tooltip__close">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
+                    </button>
+                </div>
+    
+                <div class="tooltip__content">
+                    <p class="tooltip__subtitle">Shortcut for <strong>Visible Area</strong> screenshot</p>
+                    <p class="tooltip__stats">58% of SimpleSnap users capture with shortcut</p> 
+                </div>
+    
+                
+        <div class="tooltip__actions">
+            <button class="tooltip__settings">
+                <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/settings.svg" alt="settings-icon">
+                <p class="tooltip__settings-text">Settings</p>
+            </button>
+            <button class="tooltip__confirm">Got it</button>
+        </div>
+            </div>
+        
+            <div id="lines" class="tooltip tooltip--arrow-left hidden">
+                <div class="tooltip__header">
+                    <div class="tooltip__title">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/ui.svg" alt="ui icon" class="tooltip__icon">
+                        <h3 class="tooltip__title">Lines and Arrows</h3>
+                    </div>
+                    <button class="tooltip__close">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
+                    </button>
+                </div>
+    
+                <div class="tooltip__content">
+                    <p class="tooltip__subtitle">Draw arrows and lines - straight or freehand, select color and line width here.</p>
+                    <p class="tooltip__stats">Most users start their edits here.</p> 
+                </div>
+    
+                
+            </div>
+        
+            <div id="crop" class="tooltip tooltip--arrow-left hidden">
+                <div class="tooltip__header">
+                    <div class="tooltip__title">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/selected.svg" alt="selected icon" class="tooltip__icon">
+                        <h3 class="tooltip__title">Crop</h3>
+                    </div>
+                    <button class="tooltip__close">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
+                    </button>
+                </div>
+    
+                <div class="tooltip__content">
+                    <p class="tooltip__subtitle">You can trim your screenshot to focus on a specific area — just select the zone you want to keep, and the rest will be cropped out</p>
+                    <p class="tooltip__stats">A useful feature many users overlook.</p> 
+                </div>
+    
+                
+            </div>
+        
+            <div id="undo" class="tooltip tooltip--arrow-right hidden">
+                <div class="tooltip__header">
+                    <div class="tooltip__title">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/undo-arrow.svg" alt="undo-arrow icon" class="tooltip__icon">
+                        <h3 class="tooltip__title">Undo anytime</h3>
+                    </div>
+                    <button class="tooltip__close">
+                        <img src="chrome-extension://nbljjljaoanknannhlonmaknhckcoldi/resources/graphics/close.svg" alt="close-icon">
+                    </button>
+                </div>
+    
+                <div class="tooltip__content">
+                    <p class="tooltip__subtitle">Cancel edits and return to the previous appearance of screenshot.</p>
+                    <p class="tooltip__stats">Right menu allows you to manage history of changes.</p> 
+                </div>
+    
+                
+            </div>
+        
+    </div></template></div><div id="capture-shell-oaxgpa" data-snapoverlay="true" style="display: none;"><template shadowrootmode="open"><style>
+    .captureShadeLayer {
+        position: fixed; top: 0; width: 100%; left: 0; background: rgba(255, 255, 255, 0.22); height: 100%; cursor: crosshair; z-index: 2147483647;
+    }
+    .captureSelectionFrame {
+        cursor: crosshair; z-index: 2147483647; border: 3px dashed #06DFC9; position: fixed; background-color: rgba(38, 37, 37, 0.69);
+    }</style></template></div></body></html>
