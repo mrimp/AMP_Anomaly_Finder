@@ -2,6 +2,9 @@
 
 A single-file, fully offline HTML tool to review **AMP “Press” CSV exports** and flag potential anomalies with **explainable causes**.
 
+Live app (GitHub Pages): https://mrimp.github.io/AMP_Anomaly_Finder/
+Offline: download AMP_Anomaly_Finder.html (or releases/AMP_Anomaly_Finder_v3.4.4_RELEASE.html) and open it in Chrome/Edge/Firefox. No install.
+
 ## What’s in this repo
 
 - `index.html` — the entire application (no external dependencies)
