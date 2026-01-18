@@ -52,11 +52,13 @@ Open the in-app **System Tools** to access:
 
 ## Screenshots
 
-Add screenshots here for GitHub releases:
+Drop screenshots into `docs/screenshots/` for GitHub releases:
 
-- `docs/screenshot-01.png` — main view
-- `docs/screenshot-02.png` — anomalies view
-- `docs/screenshot-03.png` — system tools
+- `docs/screenshots/screenshot-01.png` — main view
+- `docs/screenshots/screenshot-02.png` — anomalies view
+- `docs/screenshots/screenshot-03.png` — System Tools
 
-(You can create a `docs/` folder and drop images in; the app itself remains single‑file.)
+See `docs/README.md` for the suggested layout.
+
+(These assets are optional; the app remains single-file and fully offline.)
 

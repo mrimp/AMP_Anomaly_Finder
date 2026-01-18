@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.0.3 DOCS-SCAFFOLD
+- Added `docs/` scaffold (`docs/README.md`, `docs/screenshots/`, `docs/assets/`) for GitHub release assets.
+- Updated main README screenshot paths.
+
 ## v4.0.2 OFFLINE-PORTABLE-REFACTOR
 - **Fix:** removed duplicated Offline/Portable tools block that caused `LOCKDOWN_KEY` redeclaration errors.
 - Version stamp updated.
