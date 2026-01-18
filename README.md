@@ -1,10 +1,28 @@
-# AMP Anomaly Finder
+# AMP Anomaly Finder (Offline)
 
-- **Live app (GitHub Pages):** https://mrimp.github.io/AMP_Anomaly_Finder/
-- **Offline:** download `AMP_Anomaly_Finder.html` (or `releases/AMP_Anomaly_Finder_v3.4.4_RELEASE.html`) and open it in Chrome/Edge/Firefox. No install.
+A single-file, fully offline HTML tool to review **AMP “Press” CSV exports** and flag potential anomalies with **explainable causes**.
 
-## What it does
-Upload AMP “Press” CSV exports. It scores anomalies and provides explainable causes.
+## What’s in this repo
 
-## Screenshot
-<img width="2415" height="3500" alt="AMP Anomaly Finder screenshot" src="https://github.com/user-attachments/assets/331510a8-8dc1-49e8-9136-8e86a5d5fe6a" />
+- `index.html` — the entire application (no external dependencies)
+
+## Run it
+
+1. Download this repo as a ZIP (or clone it).
+2. Open `index.html` directly in a browser (Chrome / Edge recommended).
+3. Drag-and-drop one or more AMP CSV files.
+
+## Offline / privacy
+
+- No network calls.
+- Nothing is uploaded anywhere.
+- Settings are stored locally in your browser (`localStorage`).
+
+## Exports
+
+- Export the currently filtered rows as CSV
+- Export/Import a `.json` package (sessions + settings)
+
+## Notes
+
+This is a cleanup/refactor build intended to be **distribution-ready** as a GitHub repository ZIP.
