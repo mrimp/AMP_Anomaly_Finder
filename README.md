@@ -1,31 +1,62 @@
 # AMP Anomaly Finder (Offline)
 
-A single-file, fully offline HTML tool to review **AMP “Press” CSV exports** and flag potential anomalies with **explainable causes**.
+[![Offline](https://img.shields.io/badge/offline-100%25-brightgreen)](./index.html)
+[![Single File](https://img.shields.io/badge/single--file-yes-blue)](./index.html)
+[![No Dependencies](https://img.shields.io/badge/dependencies-none-success)](./index.html)
 
-Live app (GitHub Pages): https://mrimp.github.io/AMP_Anomaly_Finder/
-Offline: download AMP_Anomaly_Finder.html (or releases/AMP_Anomaly_Finder_v3.4.4_RELEASE.html) and open it in Chrome/Edge/Firefox. No install.
+A **single-file, fully offline** HTML tool to review **AMP “Press” CSV exports** and flag potential anomalies with **explainable causes**.
 
-## What’s in this repo
-
-- `index.html` — the entire application (no external dependencies)
-
-## Run it
+## Quick start
 
 1. Download this repo as a ZIP (or clone it).
-2. Open `index.html` directly in a browser (Chrome / Edge recommended).
+2. Open **`index.html`** (or **`AMP_Anomaly_Finder.html`**) directly in a browser.
 3. Drag-and-drop one or more AMP CSV files.
 
-## Offline / privacy
+## Files
 
-- No network calls.
+- `index.html` — the full application (preferred entry)
+- `AMP_Anomaly_Finder.html` — same app, alternate filename for workflows
+- `CHANGELOG.md` — release notes
+- `RELEASE_CHECKLIST.md` — quick ship checklist
+
+## Offline + privacy guarantees
+
+- **No network calls** (optional “Offline Lockdown” blocks and logs any attempted external calls).
 - Nothing is uploaded anywhere.
 - Settings are stored locally in your browser (`localStorage`).
+
+## Utilities
+
+Open the in-app **System Tools** to access:
+
+- **Offline Self‑Test** — verifies:
+  - no external references (http/https/ws/wss/chrome-extension)
+  - storage availability
+  - File APIs availability
+  - whether lockdown is enabled
+  - whether any blocked network attempts occurred
+
+- **Portable Mode**
+  - **Export bundle**: session data + settings (`localStorage`) into a JSON file
+  - **Import bundle**: Replace or Merge, optionally applying imported settings
 
 ## Exports
 
 - Export the currently filtered rows as CSV
-- Export/Import a `.json` package (sessions + settings)
+- Export/Import a portable JSON bundle (sessions + settings)
 
-## Notes
+## Browser notes
 
-This is a cleanup/refactor build intended to be **distribution-ready** as a GitHub repository ZIP.
+- **Chrome / Edge** recommended.
+- Some browsers restrict drag‑and‑drop or file access when running from `file://`. If you run into issues, try Chrome/Edge or open the folder via a simple local web server.
+
+## Screenshots
+
+Add screenshots here for GitHub releases:
+
+- `docs/screenshot-01.png` — main view
+- `docs/screenshot-02.png` — anomalies view
+- `docs/screenshot-03.png` — system tools
+
+(You can create a `docs/` folder and drop images in; the app itself remains single‑file.)
+
